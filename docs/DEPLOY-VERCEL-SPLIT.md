@@ -37,8 +37,18 @@ Use **two Vercel projects** from the **same GitHub repo**.
 
 1. **Add New Project** → same repo again (second project).
 2. **Project name:** e.g. `arc-legacy`.
-3. **Root Directory:** `client` ← important.
-4. Uses `client/vercel.json` (builds React to `dist`).
+3. **Root Directory:** `client` ← **required** (Edit in Settings → General if wrong).
+4. Uses `client/vercel.json` — `npm run build` → `dist/`.
+5. **Do not** use repo root (`.`) for the frontend project — that uses API `vercel.json` and the site will not build.
+
+### Frontend build failed?
+
+| Symptom | Fix |
+|---------|-----|
+| Log shows commit `94de47c` only / no `client/vercel.json` | `git push origin main`, then **Redeploy** |
+| `install` at repo root, no `dist` output | Set **Root Directory** to `client` |
+| Blank site, API 404 on same URL | Frontend and API must be **two projects** |
+| Products never load | Set `VITE_API_URL=https://YOUR-API.vercel.app/api` and redeploy |
 5. **Environment variables** (build-time):
 
 | Variable | Example |
