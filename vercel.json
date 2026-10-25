@@ -1,15 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install",
-  "buildCommand": "npm run build -w client",
-  "outputDirectory": "client/dist",
+  "buildCommand": "echo \"API-only project — no static build\"",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api", "destination": "/api" },
+    { "source": "/api/(.*)", "destination": "/api" }
   ],
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "server/src/**"
     }
   }
 }

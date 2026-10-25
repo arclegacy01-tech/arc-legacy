@@ -1,6 +1,10 @@
-# Deploy ARC LEGACY on Vercel
+# Deploy ARC LEGACY on Vercel (single project)
+
+> **Split frontend + API on two Vercel projects?** Use [DEPLOY-VERCEL-SPLIT.md](./DEPLOY-VERCEL-SPLIT.md) instead.
 
 One Vercel project serves the **React storefront** (`client/dist`) and the **Express API** (`/api/*` via `api/index.js`).
+
+For a **combined** `vercel.json`, merge root `vercel.json` (API) with client build settings from `client/vercel.json` and keep root as `.`.
 
 ## Prerequisites
 

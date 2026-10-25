@@ -39,6 +39,20 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan(process.env.VERCEL ? 'tiny' : 'dev'));
 
+app.get('/api/health', async (_req, res) => {
+  const payload = { ok: true, service: 'arc-legacy-api' };
+  if (!process.env.MONGODB_URI) {
+    return res.status(503).json({ ...payload, ok: false, db: 'MONGODB_URI not set' });
+  }
+  try {
+    await connectDB();
+    res.json({ ...payload, db: 'connected' });
+  } catch (err) {
+    console.error('Health DB check failed:', err.message);
+    res.status(503).json({ ...payload, ok: false, db: 'connection failed' });
+  }
+});
+
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -46,10 +60,6 @@ app.use(async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'arc-legacy-api' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -62,5 +72,12 @@ app.use('/api/cms', cmsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/wholesale', wholesaleRoutes);
 app.use('/api/uploads', uploadRoutes);
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    message: process.env.VERCEL ? 'Server error' : err.message || 'Server error',
+  });
+});
 
 export default app;

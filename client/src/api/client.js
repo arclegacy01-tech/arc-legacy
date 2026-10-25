@@ -1,4 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+/** Split deploy: set VITE_API_URL to https://your-api.vercel.app/api (include /api) */
+function normalizeApiBase(base) {
+  if (!base) return '/api';
+  const trimmed = base.replace(/\/$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 export async function api(path, options = {}) {
   const headers = {
