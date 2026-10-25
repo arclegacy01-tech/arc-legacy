@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-cream text-neutral-800;
+  }
+}
+
+@layer utilities {
+  .font-script {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-maroon px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-maroon-dark;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-maroon px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-maroon transition hover:bg-maroon hover:text-white;
+  }
+  .input-field {
+    @apply w-full rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-maroon focus:ring-1 focus:ring-maroon;
+  }
+}
