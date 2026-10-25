@@ -3,10 +3,10 @@
   "installCommand": "npm install",
   "buildCommand": "mkdir -p public",
   "outputDirectory": "public",
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
   "functions": {
-    "api/[[...path]].js": {
-      "maxDuration": 30,
-      "includeFiles": "server/src/**"
+    "api/index.js": {
+      "maxDuration": 10
     }
   }
 }

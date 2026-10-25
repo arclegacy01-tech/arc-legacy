@@ -1,5 +1,14 @@
-import admin from 'firebase-admin';
-import { getAuth } from 'firebase-admin/auth';
+let adminMod;
+let getAuth;
+
+async function loadFirebase() {
+  if (!adminMod) {
+    const imported = await import('firebase-admin');
+    adminMod = imported.default ?? imported;
+    ({ getAuth } = await import('firebase-admin/auth'));
+  }
+  return { admin: adminMod, getAuth };
+}
 
 let app;
 
@@ -17,8 +26,13 @@ function normalizePrivateKey(key) {
   return key;
 }
 
-export function getFirebaseAuth() {
-  if (!isFirebaseAdminConfigured()) return null;
+export async function verifyFirebaseIdToken(idToken) {
+  if (!isFirebaseAdminConfigured()) {
+    const error = new Error('Google sign-in is not configured on the server');
+    error.status = 503;
+    throw error;
+  }
+  const { admin, getAuth: getAuthFn } = await loadFirebase();
   if (!app) {
     app = admin.initializeApp({
       credential: admin.cert({
@@ -28,5 +42,5 @@ export function getFirebaseAuth() {
       }),
     });
   }
-  return getAuth(app);
+  return getAuthFn(app).verifyIdToken(idToken);
 }

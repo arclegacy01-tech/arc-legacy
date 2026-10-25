@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
-import { getFirebaseAuth, isFirebaseAdminConfigured } from '../config/firebase.js';
+import { isFirebaseAdminConfigured, verifyFirebaseIdToken } from '../config/firebase.js';
 
 const router = Router();
 
@@ -83,8 +83,7 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ message: 'Missing Google ID token' });
     }
 
-    const firebaseAuth = getFirebaseAuth();
-    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const decoded = await verifyFirebaseIdToken(idToken);
     const email = decoded.email?.toLowerCase();
     if (!email) {
       return res.status(400).json({ message: 'Google account must include an email address' });
