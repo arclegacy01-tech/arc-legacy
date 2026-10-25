@@ -39,6 +39,15 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan(process.env.VERCEL ? 'tiny' : 'dev'));
 
+// Vercel may pass /api/health or just /health depending on the function file.
+app.use((req, _res, next) => {
+  const [pathOnly, query] = req.url.split('?');
+  if (!pathOnly.startsWith('/api')) {
+    req.url = `/api${pathOnly}${query ? `?${query}` : ''}`;
+  }
+  next();
+});
+
 app.get('/api/health', async (_req, res) => {
   const payload = { ok: true, service: 'arc-legacy-api' };
   if (!process.env.MONGODB_URI) {

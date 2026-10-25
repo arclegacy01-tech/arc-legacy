@@ -12,5 +12,4 @@ if (!process.env.VERCEL) {
 
 const { default: app } = await import('../server/src/app.js');
 
-// Vercel Node runtime runs Express apps via default export (no serverless-http)
 export default app;
