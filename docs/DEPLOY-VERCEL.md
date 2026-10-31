@@ -57,7 +57,7 @@ Add these for **Production** (and **Preview** if you want previews to work):
 | `CLOUDINARY_CLOUD_NAME` | Optional | Admin uploads |
 | `CLOUDINARY_API_KEY` | Optional | |
 | `CLOUDINARY_API_SECRET` | Optional | |
-| `CLOUDINARY_FOLDER` | Optional | e.g. `arc-legacy` |
+| `CLOUDINARY_FOLDER` | Optional | Base folder only, e.g. `arc-legacy`. Each upload is stored in `{CLOUDINARY_FOLDER}/{category-slug}` and tagged `cat_{slug}`. The media library filters by the category saved in MongoDB. |
 | `RAZORPAY_KEY_ID` | Optional | Checkout |
 | `RAZORPAY_KEY_SECRET` | Optional | |
 | `CORS_ORIGINS` | Optional | Extra origins, comma-separated |

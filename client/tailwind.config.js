@@ -23,6 +23,7 @@ export default {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
         script: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        display: ['"Great Vibes"', 'cursive'],
       },
       boxShadow: {
         card: '0 4px 24px rgba(107, 30, 46, 0.08)',

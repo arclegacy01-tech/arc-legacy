@@ -57,7 +57,9 @@ router.get('/', async (req, res) => {
       ? { price: 1 }
       : req.query.sort === 'price-desc'
         ? { price: -1 }
-        : { createdAt: -1 };
+        : req.query.sort === 'featured'
+          ? { isFeatured: -1, createdAt: -1 }
+          : { createdAt: -1 };
 
     let filter = buildProductFilter(req.query);
     if (req.query.categorySlug) {

@@ -6,6 +6,14 @@ import { useCart } from '../context/CartContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
 import { addRecentlyViewed } from '../hooks/useRecentlyViewed.js';
 import { formatPrice, unitLabel } from '../utils/format.js';
+import StarRating from '../components/StarRating.jsx';
+import { EMBELLISHMENTS_PRODUCTS } from '../data/embellishmentsData.js';
+import { LATKANS_PRODUCTS, LATKANS_FAVOURITES } from '../data/latkansData.js';
+import { NEW_ARRIVALS_PRODUCTS, NEW_ARRIVALS_TRENDING } from '../data/newArrivalsData.js';
+import { POM_POM_PRODUCTS } from '../data/pomPomData.js';
+import { TRIMS_BORDERS_PRODUCTS } from '../data/trimsBordersData.js';
+import { WHOLESALE_TRENDING_PRODUCTS } from '../data/wholesaleData.js';
+import { GOTA_PATTI_PRODUCTS } from '../data/gotaPattiData.js';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -22,7 +30,137 @@ export default function ProductDetailPage() {
         setProduct(d.product);
         addRecentlyViewed(d.product);
       })
-      .catch(() => setError('Product not found'));
+      .catch(() => {
+        // Check Embellishments
+        const embMatch = EMBELLISHMENTS_PRODUCTS.find((p) => p.slug === slug);
+        if (embMatch) {
+          const p = {
+            ...embMatch,
+            category: { name: 'Embellishments', slug: 'embellishments' },
+            shortDescription: 'Exquisite handcrafted embellishment designed for ethnic wear, bridal couture, blouses, sarees and DIY fashion projects.',
+            stock: 25,
+            lowStockAlert: 5,
+            trackStock: true,
+            reviewCount: 24,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check Latkans
+        const allLatkans = [...LATKANS_PRODUCTS, ...LATKANS_FAVOURITES];
+        const latMatch = allLatkans.find((p) => p.slug === slug);
+        if (latMatch) {
+          const p = {
+            ...latMatch,
+            images: latMatch.images || [{ url: latMatch.image, isMain: true }],
+            category: { name: 'Latkans', slug: 'latkans' },
+            shortDescription: 'Handcrafted premium latkan designed to add movement, charm, and elegance to lehengas, dupattas, blouses, and festive outfits.',
+            stock: 30,
+            lowStockAlert: 6,
+            trackStock: true,
+            reviewCount: 18,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check New Arrivals
+        const allNewArrivals = [...NEW_ARRIVALS_PRODUCTS, ...NEW_ARRIVALS_TRENDING];
+        const naMatch = allNewArrivals.find((p) => p.slug === slug);
+        if (naMatch) {
+          const p = {
+            ...naMatch,
+            images: naMatch.images || [{ url: naMatch.image, isMain: true }],
+            category: { name: 'New Arrivals', slug: 'new-arrivals' },
+            shortDescription: 'Handpicked new arrival crafted for bridal couture, festive outfits, sarees, lehengas, and custom creations.',
+            stock: 40,
+            lowStockAlert: 5,
+            trackStock: true,
+            reviewCount: 22,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check Pom Pom Trims
+        const pomMatch = POM_POM_PRODUCTS.find((p) => p.slug === slug);
+        if (pomMatch) {
+          const p = {
+            ...pomMatch,
+            images: pomMatch.images || [{ url: pomMatch.image, isMain: true }],
+            category: { name: 'Pom Pom Trims', slug: 'pom-pom-trims' },
+            shortDescription: 'Playful, vibrant handcrafted pom pom trim designed to add a touch of tradition and charm to dupattas, blouses, lehengas, bags, and home décor.',
+            stock: 35,
+            lowStockAlert: 5,
+            trackStock: true,
+            reviewCount: 26,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check Trims & Borders
+        const trimsMatch = TRIMS_BORDERS_PRODUCTS.find((p) => p.slug === slug);
+        if (trimsMatch) {
+          const p = {
+            ...trimsMatch,
+            images: trimsMatch.images || [{ url: trimsMatch.image, isMain: true }],
+            category: { name: 'Trims & Borders', slug: 'trims-borders' },
+            shortDescription: 'Intricately designed border and trim crafted to elevate ethnic wear, bridal outfits, sarees, lehengas, blouses, and home décor.',
+            stock: 40,
+            lowStockAlert: 5,
+            trackStock: true,
+            reviewCount: 29,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check Wholesale Trending Products
+        const wsMatch = WHOLESALE_TRENDING_PRODUCTS.find((p) => p.slug === slug);
+        if (wsMatch) {
+          const p = {
+            ...wsMatch,
+            rating: 4.8,
+            images: wsMatch.images || [{ url: wsMatch.image, isMain: true }],
+            category: { name: 'Wholesale Collection', slug: 'wholesale' },
+            shortDescription: 'Premium wholesale trim crafted for boutiques, fashion designers, tailors, and resellers.',
+            stock: 100,
+            lowStockAlert: 10,
+            trackStock: true,
+            reviewCount: 34,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        // Check Gota Patti Products
+        const gotaMatch = GOTA_PATTI_PRODUCTS.find((p) => p.slug === slug);
+        if (gotaMatch) {
+          const p = {
+            ...gotaMatch,
+            images: gotaMatch.images || [{ url: gotaMatch.image, isMain: true }],
+            category: { name: 'Gota Patti', slug: 'gota-patti' },
+            shortDescription: 'Traditional handcrafted gota patti border and trim designed for lehengas, sarees, dupattas, and festive couture.',
+            stock: 45,
+            lowStockAlert: 5,
+            trackStock: true,
+            reviewCount: 28,
+          };
+          setProduct(p);
+          addRecentlyViewed(p);
+          return;
+        }
+
+        setError('Product not found');
+      });
   }, [slug]);
 
   if (error) {
@@ -65,7 +203,10 @@ export default function ProductDetailPage() {
               <span className="text-sm text-neutral-400 line-through">{formatPrice(product.comparePrice)}</span>
             )}
           </div>
-          <p className="mt-2 text-sm text-neutral-600">★ {product.rating?.toFixed(1)} ({product.reviewCount} reviews)</p>
+          <div className="mt-2 flex items-center gap-2">
+            <StarRating value={product.rating ?? 4.8} />
+            <span className="text-xs text-neutral-500">· {product.reviewCount ?? 12} reviews</span>
+          </div>
           <p className="mt-6 text-sm leading-relaxed text-neutral-700">{product.shortDescription}</p>
 
           {product.stock <= product.lowStockAlert && product.trackStock && (

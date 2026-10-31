@@ -47,11 +47,14 @@ const empty = {
 export default function AdminBannersPage() {
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [imageCategory, setImageCategory] = useState('');
 
   const load = () => api('/cms/banners').then((d) => setItems(d.items));
 
   useEffect(() => {
     load();
+    api('/categories').then((d) => setCategories(d.categories)).catch(() => {});
   }, []);
 
   const save = async (form) => {
@@ -79,9 +82,19 @@ export default function AdminBannersPage() {
       </div>
       {editing && (
         <div className="mt-6 max-w-xl space-y-4">
+          <label className="block text-sm">
+            Image category
+            <select className="input-field mt-1" value={imageCategory} onChange={(e) => setImageCategory(e.target.value)}>
+              <option value="">Select…</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
           <CloudinaryUploadField
             label="Banner image"
             value={editing.imageUrl}
+            categoryId={imageCategory}
             onChange={(url) => setEditing({ ...editing, imageUrl: url })}
           />
           <CmsEditor
