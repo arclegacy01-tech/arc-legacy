@@ -447,12 +447,12 @@ export default function RegisterPage() {
               </div>
 
               {/* Social Buttons */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
                 <button
                   type="button"
                   onClick={onGoogle}
                   disabled={busy}
-                  className="flex items-center justify-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:border-maroon"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:border-maroon"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
                     <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z" />
@@ -461,18 +461,6 @@ export default function RegisterPage() {
                     <path fill="#4285F4" d="M21.1 12.3c0-.6-.1-1.1-.2-1.6H12v3.9h5.5c-.3 1.3-1 2.4-2.1 3.1l2.9 2.4c1.7-1.6 2.8-4 2.8-7.8z" />
                   </svg>
                   Continue with Google
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onGoogle}
-                  disabled={busy}
-                  className="flex items-center justify-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:border-maroon"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1877F2]" fill="currentColor" aria-hidden="true">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Continue with Facebook
                 </button>
               </div>
 

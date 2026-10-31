@@ -110,11 +110,10 @@ router.post('/google', async (req, res) => {
     res.json({ token, user: publicUser(user) });
   } catch (err) {
     console.error('Google auth error:', err);
-    const message =
-      process.env.NODE_ENV === 'production'
-        ? 'Google sign-in failed'
-        : err.message || 'Google sign-in failed';
-    res.status(401).json({ message });
+    res.status(401).json({
+      message: err.message || 'Google sign-in failed',
+      code: err.code || null,
+    });
   }
 });
 

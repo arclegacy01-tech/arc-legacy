@@ -22,8 +22,14 @@ export function isFirebaseAdminConfigured() {
 
 function normalizePrivateKey(key) {
   if (!key) return key;
-  if (key.includes('\\n')) return key.replace(/\\n/g, '\n');
-  return key;
+  let normalized = key.trim();
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+  return normalized.replace(/\\n/g, '\n');
 }
 
 export async function verifyFirebaseIdToken(idToken) {
@@ -33,7 +39,10 @@ export async function verifyFirebaseIdToken(idToken) {
     throw error;
   }
   const { admin, getAuth: getAuthFn } = await loadFirebase();
-  if (!app) {
+  const existingApps = admin.getApps?.() || [];
+  if (existingApps.length > 0) {
+    app = existingApps[0];
+  } else if (!app) {
     app = admin.initializeApp({
       credential: admin.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
