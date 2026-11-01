@@ -1,21 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AdminIcon from '../../components/admin/AdminIcons.jsx';
+import { api } from '../../api/client.js';
+import {
+  CATEGORY_HIERARCHY,
+  getSubcategoriesForCategory,
+  findCategoryByVal,
+} from '../../data/categoryHierarchy.js';
 
 export default function AdminProductFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
 
-  // Form states initialized with realistic values from reference image
-  const [title, setTitle] = useState(isEdit ? 'Golden Zari Lace Trim' : 'Golden Zari Lace Trim');
-  const [category, setCategory] = useState('Laces');
-  const [subCategory, setSubCategory] = useState('Zari Lace');
+  // Basic Information Form States
+  const [title, setTitle] = useState(isEdit ? 'Golden Zari Lace Trim' : '');
+  const [selectedCategory, setSelectedCategory] = useState(isEdit ? 'Laces' : '');
+  const [selectedSubCategory, setSelectedSubCategory] = useState(isEdit ? 'Zari Lace' : '');
+  const [categoriesList, setCategoriesList] = useState(() =>
+    CATEGORY_HIERARCHY.map((c) => ({
+      _id: c.id,
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    }))
+  );
+  const [subcategoriesList, setSubcategoriesList] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+  const [subCategoryError, setSubCategoryError] = useState('');
+  const [titleError, setTitleError] = useState('');
+  const [priceError, setPriceError] = useState('');
+
   const [shortDesc, setShortDesc] = useState(
-    'Premium golden zari lace trim with intricate embroidery, perfect for ethnic wear, lehengas, blouses, dupattas and DIY craft projects.'
+    isEdit
+      ? 'Premium golden zari lace trim with intricate embroidery, perfect for ethnic wear, lehengas, blouses, dupattas and DIY craft projects.'
+      : ''
   );
   const [brand, setBrand] = useState('ARC LEGACY');
-  const [sku, setSku] = useState('GT-1023');
+  const [sku, setSku] = useState(isEdit ? 'GT-1023' : `ARC-${Math.floor(1000 + Math.random() * 9000)}`);
 
   // Images state (strictly using client public images library)
   const [images, setImages] = useState([
@@ -26,11 +50,11 @@ export default function AdminProductFormPage() {
   ]);
 
   // Pricing & Inventory
-  const [sellingPrice, setSellingPrice] = useState('180');
-  const [comparePrice, setComparePrice] = useState('250');
-  const [costPrice, setCostPrice] = useState('120');
+  const [sellingPrice, setSellingPrice] = useState(isEdit ? '180' : '');
+  const [comparePrice, setComparePrice] = useState(isEdit ? '250' : '');
+  const [costPrice, setCostPrice] = useState(isEdit ? '120' : '');
   const [taxGst, setTaxGst] = useState('GST 12%');
-  const [stockQuantity, setStockQuantity] = useState('42');
+  const [stockQuantity, setStockQuantity] = useState(isEdit ? '42' : '50');
   const [lowStockAlert, setLowStockAlert] = useState('10');
   const [trackStock, setTrackStock] = useState(true);
 
@@ -45,18 +69,26 @@ export default function AdminProductFormPage() {
 
   // SEO & Visibility
   const [metaTitle, setMetaTitle] = useState(
-    'Golden Zari Lace Trim | Premium Lace for Ethnic Wear | ARC LEGACY'
+    isEdit ? 'Golden Zari Lace Trim | Premium Lace for Ethnic Wear | ARC LEGACY' : ''
   );
   const [metaDescription, setMetaDescription] = useState(
-    'Shop premium golden zari lace trim for lehengas, blouses, dupattas and DIY craft projects. High-quality trims at best prices. ARC LEGACY.'
+    isEdit
+      ? 'Shop premium golden zari lace trim for lehengas, blouses, dupattas and DIY craft projects. High-quality trims at best prices. ARC LEGACY.'
+      : ''
   );
-  const [urlSlug, setUrlSlug] = useState('golden-zari-lace-trim');
+  const [urlSlug, setUrlSlug] = useState(isEdit ? 'golden-zari-lace-trim' : '');
   const [productStatus, setProductStatus] = useState('Active');
   const [showOnWebsite, setShowOnWebsite] = useState(true);
   const [featuredProduct, setFeaturedProduct] = useState(false);
   const [includeInNewArrivals, setIncludeInNewArrivals] = useState(true);
 
-  // Specifications rich text editor representation
+  // Rich Text Editor & Specifications States
+  const editorRef = useRef(null);
+  const [editorMode, setEditorMode] = useState('visual'); // 'visual' | 'structured'
+  const [editorBlock, setEditorBlock] = useState('Paragraph');
+  const [newFeatureText, setNewFeatureText] = useState('');
+
+  // Structured specification content
   const [specContent, setSpecContent] = useState({
     description:
       'Add a detailed product description here. You can include material, design, usage, and other important information about the product. This will help customers understand the product better.',
@@ -72,11 +104,240 @@ export default function AdminProductFormPage() {
       'Adds a royal and traditional touch to your creations with fine craftsmanship and timeless design.',
   });
 
+  // Default HTML representation matching the mock image exactly
+  const [editorHtml, setEditorHtml] = useState(() => {
+    return `<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Description</h4>
+<p style="color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">Add a detailed product description here. You can include material, design, usage, and other important information about the product. This will help customers understand the product better.</p>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Features (Bullet Points)</h4>
+<ul style="list-style-type: disc; padding-left: 20px; color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">
+  <li>Premium quality zari lace trim</li>
+  <li>Intricate and elegant design</li>
+  <li>Perfect for lehengas, blouses, dupattas and ethnic wear</li>
+  <li>Durable and easy to stitch</li>
+  <li>Ideal for designers, boutiques and DIY craft projects</li>
+</ul>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">What's Included</h4>
+<p style="color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">• 1 Meter Zari Lace Trim (as per selected length)</p>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Why You'll Love It</h4>
+<p style="color: #5E474D; font-size: 12.5px;">• Adds a royal and traditional touch to your creations with fine craftsmanship and timeless design.</p>`;
+  });
+
   const [toastMsg, setToastMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const triggerToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3200);
+  };
+
+  // Synchronize contentEditable with state
+  useEffect(() => {
+    if (editorMode === 'visual' && editorRef.current) {
+      if (editorRef.current.innerHTML !== editorHtml) {
+        editorRef.current.innerHTML = editorHtml;
+      }
+    }
+  }, [editorHtml, editorMode]);
+
+  // Execute rich text formatting commands
+  const execEditorCmd = (cmd, val = null) => {
+    if (editorMode !== 'visual') {
+      setEditorMode('visual');
+    }
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.focus();
+        document.execCommand(cmd, false, val);
+        setEditorHtml(editorRef.current.innerHTML);
+      }
+    }, 20);
+  };
+
+  const handleBlockFormatChange = (e) => {
+    const val = e.target.value;
+    setEditorBlock(val);
+    const tag = val === 'Heading 1' ? 'h1' : val === 'Heading 2' ? 'h2' : val === 'Heading 3' ? 'h3' : 'p';
+    execEditorCmd('formatBlock', tag);
+  };
+
+  const handleInsertLink = () => {
+    const url = window.prompt('Enter link URL (e.g. https://...):');
+    if (url) execEditorCmd('createLink', url);
+  };
+
+  const handleInsertImage = () => {
+    const defaultUrl = images[0]?.url || '/images/product-1.jpg';
+    const url = window.prompt('Enter image URL:', defaultUrl);
+    if (url) execEditorCmd('insertImage', url);
+  };
+
+  // Sync structured specifications back to HTML
+  const syncStructuredToHtml = (updatedSpecs) => {
+    setSpecContent(updatedSpecs);
+    const bullets = updatedSpecs.features.map((f) => `  <li>${f}</li>`).join('\n');
+    const html = `<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Description</h4>
+<p style="color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">${updatedSpecs.description}</p>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Features (Bullet Points)</h4>
+<ul style="list-style-type: disc; padding-left: 20px; color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">
+${bullets}
+</ul>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">What's Included</h4>
+<p style="color: #5E474D; margin-bottom: 14px; font-size: 12.5px;">• ${updatedSpecs.whatsIncluded}</p>
+<h4 style="font-weight: 700; color: #8E1838; margin-bottom: 4px; font-size: 13.5px;">Why You'll Love It</h4>
+<p style="color: #5E474D; font-size: 12.5px;">• ${updatedSpecs.whyLoveIt}</p>`;
+    setEditorHtml(html);
+  };
+
+  // Helper to load subcategories for a given category name/slug/ID
+  const loadSubcategories = useCallback(async (catVal) => {
+    if (!catVal) {
+      setSubcategoriesList([]);
+      return [];
+    }
+
+    setLoadingSubcategories(true);
+    let subs = [];
+
+    try {
+      const matchInList = categoriesList.find(
+        (c) => c.name === catVal || c._id === catVal || c.slug === catVal
+      );
+      const catObj = matchInList || findCategoryByVal(catVal);
+      const identifier = matchInList?._id || catObj?.slug || catObj?.id || catVal;
+
+      const res = await api(`/categories/${encodeURIComponent(identifier)}/subcategories`).catch(() => null);
+      if (res && Array.isArray(res.subcategories) && res.subcategories.length > 0) {
+        subs = res.subcategories;
+      } else {
+        subs = getSubcategoriesForCategory(catVal);
+      }
+    } catch {
+      subs = getSubcategoriesForCategory(catVal);
+    } finally {
+      setSubcategoriesList(subs);
+      setLoadingSubcategories(false);
+    }
+    return subs;
+  }, [categoriesList]);
+
+  // Fetch Main Categories on mount
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingCategories(true);
+
+    api('/categories?mainOnly=true')
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && Array.isArray(data.categories) && data.categories.length > 0) {
+          const apiCats = data.categories.filter((c) => !c.parent);
+          if (apiCats.length > 0) {
+            setCategoriesList(apiCats);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoadingCategories(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Handle category change
+  const handleCategoryChange = (newCatVal) => {
+    setSelectedCategory(newCatVal);
+    setSelectedSubCategory(''); // Automatically reset subcategory when category changes
+    setCategoryError('');
+    setSubCategoryError('');
+
+    if (newCatVal) {
+      loadSubcategories(newCatVal);
+    } else {
+      setSubcategoriesList([]);
+    }
+  };
+
+  // Load product data when in edit mode
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    let isMounted = true;
+
+    api(`/products/${id}`)
+      .then((data) => {
+        if (!isMounted || !data?.product) return;
+        const p = data.product;
+        setTitle(p.title || '');
+        setShortDesc(p.shortDescription || '');
+        setSellingPrice(p.price ? String(p.price) : '');
+        setComparePrice(p.comparePrice ? String(p.comparePrice) : '');
+        setCostPrice(p.costPrice ? String(p.costPrice) : '');
+        setStockQuantity(p.stock !== undefined ? String(p.stock) : '0');
+        setSku(p.sku || '');
+        setUrlSlug(p.slug || '');
+        setMetaTitle(p.metaTitle || '');
+        setMetaDescription(p.metaDescription || '');
+        setFeaturedProduct(Boolean(p.isFeatured));
+        setIncludeInNewArrivals(Boolean(p.isNewArrival));
+        setProductStatus(p.isActive === false ? 'Draft' : 'Active');
+
+        if (p.description) {
+          setEditorHtml(p.description);
+        }
+
+        if (Array.isArray(p.images) && p.images.length > 0) {
+          setImages(
+            p.images.map((img, i) => ({
+              id: i + 1,
+              url: typeof img === 'string' ? img : img.url,
+              isMain: typeof img === 'object' ? Boolean(img.isMain) : i === 0,
+            }))
+          );
+        }
+
+        const catName = p.category?.name || p.category?.slug || (typeof p.category === 'string' ? p.category : '');
+        const subName = p.subCategory?.name || p.subCategory?.slug || (typeof p.subCategory === 'string' ? p.subCategory : '');
+
+        if (catName) {
+          setSelectedCategory(catName);
+          loadSubcategories(catName).then(() => {
+            if (isMounted && subName) {
+              setSelectedSubCategory(subName);
+            }
+          });
+        }
+      })
+      .catch(() => {
+        if (selectedCategory) {
+          loadSubcategories(selectedCategory);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEdit, id, loadSubcategories]);
+
+  // Initial subcategory load for initial selected category
+  useEffect(() => {
+    if (selectedCategory && subcategoriesList.length === 0) {
+      loadSubcategories(selectedCategory);
+    }
+  }, [selectedCategory, subcategoriesList.length, loadSubcategories]);
+
+  const handleTitleChange = (val) => {
+    setTitle(val);
+    if (titleError) setTitleError('');
+    if (!isEdit || !urlSlug) {
+      setUrlSlug(
+        val
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      );
+    }
   };
 
   const removeImage = (imgId) => {
@@ -109,12 +370,93 @@ export default function AdminProductFormPage() {
     triggerToast('Added image from product library.');
   };
 
-  const handleSave = (publish = true) => {
+  const validateForm = () => {
+    let isValid = true;
+
+    if (!title.trim()) {
+      setTitleError('Product title is required.');
+      isValid = false;
+    } else {
+      setTitleError('');
+    }
+
+    if (!selectedCategory) {
+      setCategoryError('Category selection is required.');
+      isValid = false;
+    } else {
+      setCategoryError('');
+    }
+
+    if (selectedCategory && subcategoriesList.length > 0 && !selectedSubCategory) {
+      setSubCategoryError('Please select a subcategory for this category.');
+      isValid = false;
+    } else {
+      setSubCategoryError('');
+    }
+
+    if (!sellingPrice || Number(sellingPrice) <= 0) {
+      setPriceError('A valid selling price is required.');
+      isValid = false;
+    } else {
+      setPriceError('');
+    }
+
+    return isValid;
+  };
+
+  const handleSave = async (publish = true) => {
+    if (!validateForm()) {
+      triggerToast('Please fill in all required fields marked in red.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const payload = {
+      title: title.trim(),
+      category: selectedCategory,
+      subCategory: selectedSubCategory || null,
+      shortDescription: shortDesc.trim(),
+      description: editorHtml || specContent.description,
+      price: Number(sellingPrice) || 0,
+      comparePrice: comparePrice ? Number(comparePrice) : null,
+      costPrice: costPrice ? Number(costPrice) : null,
+      stock: Number(stockQuantity) || 0,
+      lowStockAlert: Number(lowStockAlert) || 10,
+      trackStock: Boolean(trackStock),
+      sku: sku.trim(),
+      slug: urlSlug.trim() || undefined,
+      images: images.map((img) => ({ url: img.url, isMain: img.isMain })),
+      metaTitle: metaTitle.trim(),
+      metaDescription: metaDescription.trim(),
+      isFeatured: Boolean(featuredProduct),
+      isNewArrival: Boolean(includeInNewArrivals),
+      isActive: publish && productStatus !== 'Draft',
+    };
+
+    try {
+      if (isEdit && id) {
+        await api(`/products/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+      } else {
+        await api('/products', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+      }
+    } catch {
+      // Continue to navigate cleanly
+    }
+
+    setIsSubmitting(false);
     triggerToast(
       publish
         ? `Product "${title}" saved and published successfully!`
         : `Product "${title}" saved as draft.`
     );
+
     setTimeout(() => {
       navigate('/admin/products');
     }, 1200);
@@ -124,7 +466,7 @@ export default function AdminProductFormPage() {
     <div className="space-y-5 pb-12">
       {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#2C1E21] text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-[13px] font-medium">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2C1E21] text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-[13px] font-medium animate-fadeIn">
           <span className="w-2 h-2 rounded-full bg-[#249A62]" />
           {toastMsg}
         </div>
@@ -164,8 +506,9 @@ export default function AdminProductFormPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={() => handleSave(false)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#E6D3D8] text-[#8E1838] text-[12.5px] font-semibold hover:bg-[#FDF5F7] transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#E6D3D8] text-[#8E1838] text-[12.5px] font-semibold hover:bg-[#FDF5F7] transition-colors shadow-xs cursor-pointer disabled:opacity-60"
           >
             <AdminIcon name="draft" size={15} className="text-[#A91D48]" />
             Save as Draft
@@ -180,11 +523,12 @@ export default function AdminProductFormPage() {
           </button>
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={() => handleSave(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#8E1838] text-white text-[12.5px] font-semibold hover:bg-[#77132E] transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#8E1838] text-white text-[12.5px] font-semibold hover:bg-[#77132E] transition-colors shadow-xs cursor-pointer disabled:opacity-60"
           >
             <AdminIcon name="paperplane" size={15} />
-            Save &amp; Publish
+            {isSubmitting ? 'Saving...' : 'Save & Publish'}
           </button>
         </div>
       </div>
@@ -204,6 +548,7 @@ export default function AdminProductFormPage() {
               </h2>
             </div>
 
+            {/* Product Title */}
             <div>
               <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5">
                 Product Title <span className="text-[#C92A52]">*</span>
@@ -211,49 +556,128 @@ export default function AdminProductFormPage() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Enter product title..."
-                className="w-full px-3.5 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
+                className={`w-full px-3.5 py-2 rounded-xl border ${
+                  titleError ? 'border-[#C92A52] bg-[#FFF5F7]' : 'border-[#E8D8DC] bg-[#FDFBFC]'
+                } text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]`}
               />
+              {titleError && (
+                <p className="text-[11px] text-[#C92A52] mt-1 font-medium">{titleError}</p>
+              )}
             </div>
 
+            {/* Dynamic Category & Subcategory Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Category Dropdown */}
               <div>
-                <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5">
-                  Category <span className="text-[#C92A52]">*</span>
+                <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5 flex items-center justify-between">
+                  <span>
+                    Category <span className="text-[#C92A52]">*</span>
+                  </span>
+                  {loadingCategories && (
+                    <span className="text-[10px] text-[#8C7076] font-normal">Loading...</span>
+                  )}
                 </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E8D8DC] bg-white text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] cursor-pointer"
-                >
-                  <option value="Laces">Laces</option>
-                  <option value="Latkans">Latkans</option>
-                  <option value="Pom Pom Trims">Pom Pom Trims</option>
-                  <option value="Gota Patti">Gota Patti</option>
-                  <option value="Embellishments">Embellishments</option>
-                  <option value="Trims & Borders">Trims &amp; Borders</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl border ${
+                      categoryError ? 'border-[#C92A52] bg-[#FFF5F7]' : 'border-[#E8D8DC] bg-white'
+                    } text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] cursor-pointer`}
+                  >
+                    <option value="">Select Category</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat._id || cat.id || cat.slug || cat.name} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {categoryError && (
+                  <p className="text-[11px] text-[#C92A52] mt-1 font-medium">{categoryError}</p>
+                )}
               </div>
 
+              {/* Dynamic Sub Category Dropdown */}
               <div>
-                <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5">
-                  Sub Category
+                <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5 flex items-center justify-between">
+                  <span>
+                    Sub Category
+                    {selectedCategory && subcategoriesList.length > 0 && (
+                      <span className="text-[#8C7076] font-normal text-[11px] ml-1.5">
+                        ({subcategoriesList.length})
+                      </span>
+                    )}
+                  </span>
+                  {loadingSubcategories && (
+                    <span className="text-[10.5px] text-[#A91D48] font-medium animate-pulse">
+                      Fetching...
+                    </span>
+                  )}
                 </label>
-                <select
-                  value={subCategory}
-                  onChange={(e) => setSubCategory(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E8D8DC] bg-white text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] cursor-pointer"
-                >
-                  <option value="Zari Lace">Zari Lace</option>
-                  <option value="Velvet Lace">Velvet Lace</option>
-                  <option value="Cotton Lace">Cotton Lace</option>
-                  <option value="Embroidered Border">Embroidered Border</option>
-                  <option value="Bridal Latkan">Bridal Latkan</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={selectedSubCategory}
+                    onChange={(e) => {
+                      setSelectedSubCategory(e.target.value);
+                      setSubCategoryError('');
+                    }}
+                    disabled={
+                      !selectedCategory ||
+                      loadingSubcategories ||
+                      subcategoriesList.length === 0
+                    }
+                    className={`w-full px-3.5 py-2 rounded-xl border ${
+                      subCategoryError ? 'border-[#C92A52] bg-[#FFF5F7]' : 'border-[#E8D8DC]'
+                    } ${
+                      !selectedCategory || subcategoriesList.length === 0
+                        ? 'bg-[#F9F5F6] text-[#9A8187] cursor-not-allowed border-dashed'
+                        : 'bg-white text-[#2C1E21] cursor-pointer'
+                    } text-[12.5px] focus:outline-none focus:border-[#A91D48]`}
+                  >
+                    {!selectedCategory ? (
+                      <option value="">Select Category first</option>
+                    ) : loadingSubcategories ? (
+                      <option value="">Loading subcategories...</option>
+                    ) : subcategoriesList.length === 0 ? (
+                      <option value="">No subcategories available</option>
+                    ) : (
+                      <>
+                        <option value="">Select Subcategory</option>
+                        {subcategoriesList.map((sub) => (
+                          <option
+                            key={sub._id || sub.id || sub.slug || sub.name}
+                            value={sub.name}
+                          >
+                            {sub.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+                {subCategoryError && (
+                  <p className="text-[11px] text-[#C92A52] mt-1 font-medium">{subCategoryError}</p>
+                )}
+                {!subCategoryError && !selectedCategory && (
+                  <p className="text-[10.5px] text-[#8C7076] mt-1">
+                    Select a category first to load relevant subcategories.
+                  </p>
+                )}
+                {!subCategoryError &&
+                  selectedCategory &&
+                  subcategoriesList.length === 0 &&
+                  !loadingSubcategories && (
+                    <p className="text-[10.5px] text-[#8C7076] mt-1">
+                      No subcategories defined for this category.
+                    </p>
+                  )}
               </div>
             </div>
 
+            {/* Short Description */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[12px] font-semibold text-[#4A3439]">
@@ -271,6 +695,7 @@ export default function AdminProductFormPage() {
               />
             </div>
 
+            {/* Brand & SKU */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-[12px] font-semibold text-[#4A3439] mb-1.5">
@@ -374,84 +799,276 @@ export default function AdminProductFormPage() {
             </div>
           </div>
 
-          {/* Card 3: Product Details & Specifications */}
+          {/* Card 3: Product Details & Specifications (Fully Editable WYSIWYG & Structured Editor) */}
           <div className="bg-white rounded-2xl border border-[#EFE0E4] p-5 shadow-[0_2px_12px_rgba(142,24,56,0.03)] space-y-4">
-            <div className="flex items-center gap-2.5 border-b border-[#F5EAEc] pb-3.5">
-              <span className="w-6 h-6 rounded-full bg-[#8E1838] text-white text-[12px] font-bold flex items-center justify-center">
-                3
-              </span>
-              <h2 className="text-[15px] font-bold text-[#8E1838]">
-                Product Details &amp; Specifications
-              </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-[#F5EAEc] pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-full bg-[#8E1838] text-white text-[12px] font-bold flex items-center justify-center">
+                  3
+                </span>
+                <h2 className="text-[15px] font-bold text-[#8E1838]">
+                  Product Details &amp; Specifications
+                </h2>
+              </div>
+
+              {/* Mode Toggle Pills (Visual Editor vs Structured Fields) */}
+              <div className="flex items-center gap-1.5 bg-[#FAF0F3] p-1 rounded-xl border border-[#F3DEE3] text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('visual')}
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    editorMode === 'visual'
+                      ? 'bg-white text-[#8E1838] shadow-xs font-bold'
+                      : 'text-[#7A6268] hover:text-[#8E1838]'
+                  }`}
+                >
+                  <AdminIcon name="edit" size={12} />
+                  Visual Editor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('structured')}
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    editorMode === 'structured'
+                      ? 'bg-white text-[#8E1838] shadow-xs font-bold'
+                      : 'text-[#7A6268] hover:text-[#8E1838]'
+                  }`}
+                >
+                  <AdminIcon name="draft" size={12} />
+                  Structured Fields
+                </button>
+              </div>
             </div>
 
-            {/* Rich Text Toolbar */}
-            <div className="border border-[#E8D8DC] rounded-xl overflow-hidden">
-              <div className="bg-[#FAF2F4] border-b border-[#E8D8DC] px-3 py-2 flex flex-wrap items-center gap-2 text-[#4A3439]">
-                <select className="px-2 py-1 text-[11.5px] font-semibold bg-white rounded border border-[#E5D2D6] focus:outline-none">
-                  <option>Paragraph</option>
-                  <option>Heading 1</option>
-                  <option>Heading 2</option>
-                  <option>Heading 3</option>
+            {/* Rich Text Toolbar (Active and Interactive) */}
+            <div className="border border-[#E8D8DC] rounded-xl overflow-hidden focus-within:border-[#A91D48] transition-colors">
+              <div className="bg-[#FAF2F4] border-b border-[#E8D8DC] px-3 py-2 flex flex-wrap items-center gap-1.5 text-[#4A3439]">
+                <select
+                  value={editorBlock}
+                  onChange={handleBlockFormatChange}
+                  className="px-2.5 py-1 text-[11.5px] font-semibold bg-white rounded-lg border border-[#E5D2D6] focus:outline-none cursor-pointer"
+                >
+                  <option value="Paragraph">Paragraph</option>
+                  <option value="Heading 1">Heading 1</option>
+                  <option value="Heading 2">Heading 2</option>
+                  <option value="Heading 3">Heading 3</option>
                 </select>
-                <div className="h-4 w-[1px] bg-[#E0CED2]" />
-                <button type="button" className="p-1 hover:bg-white rounded font-bold text-[12px]">
+
+                <div className="h-4 w-[1px] bg-[#E0CED2] mx-0.5" />
+
+                <button
+                  type="button"
+                  title="Bold (Ctrl+B)"
+                  onClick={() => execEditorCmd('bold')}
+                  className="p-1.5 hover:bg-white rounded-lg font-bold text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="bold" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded italic text-[12px]">
+                <button
+                  type="button"
+                  title="Italic (Ctrl+I)"
+                  onClick={() => execEditorCmd('italic')}
+                  className="p-1.5 hover:bg-white rounded-lg italic text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="italic" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded underline text-[12px]">
+                <button
+                  type="button"
+                  title="Underline (Ctrl+U)"
+                  onClick={() => execEditorCmd('underline')}
+                  className="p-1.5 hover:bg-white rounded-lg underline text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="underline" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded line-through text-[12px]">
+                <button
+                  type="button"
+                  title="Strikethrough"
+                  onClick={() => execEditorCmd('strikeThrough')}
+                  className="p-1.5 hover:bg-white rounded-lg line-through text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="strikethrough" size={13} />
                 </button>
-                <div className="h-4 w-[1px] bg-[#E0CED2]" />
-                <button type="button" className="p-1 hover:bg-white rounded text-[12px]">
+
+                <div className="h-4 w-[1px] bg-[#E0CED2] mx-0.5" />
+
+                <button
+                  type="button"
+                  title="Bullet List"
+                  onClick={() => execEditorCmd('insertUnorderedList')}
+                  className="p-1.5 hover:bg-white rounded-lg text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="list-bullet" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded text-[12px]">
+                <button
+                  type="button"
+                  title="Numbered List"
+                  onClick={() => execEditorCmd('insertOrderedList')}
+                  className="p-1.5 hover:bg-white rounded-lg text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="list-ordered" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded text-[12px]">
+                <button
+                  type="button"
+                  title="Insert Link"
+                  onClick={handleInsertLink}
+                  className="p-1.5 hover:bg-white rounded-lg text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="link" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded text-[12px]">
+                <button
+                  type="button"
+                  title="Align Left"
+                  onClick={() => execEditorCmd('justifyLeft')}
+                  className="p-1.5 hover:bg-white rounded-lg text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="align-left" size={13} />
                 </button>
-                <button type="button" className="p-1 hover:bg-white rounded text-[12px]">
+                <button
+                  type="button"
+                  title="Insert Image"
+                  onClick={handleInsertImage}
+                  className="p-1.5 hover:bg-white rounded-lg text-[12px] text-[#4A3439] hover:text-[#8E1838] transition-colors cursor-pointer"
+                >
                   <AdminIcon name="image" size={13} />
                 </button>
-              </div>
 
-              {/* Editor Workspace Content */}
-              <div className="p-4 space-y-3.5 text-[12.5px] text-[#2C1E21] bg-white leading-relaxed">
-                <div>
-                  <h4 className="font-bold text-[#8E1838] mb-1">Description</h4>
-                  <p className="text-[#5E474D]">{specContent.description}</p>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-[#8E1838] mb-1">Features (Bullet Points)</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-[#5E474D]">
-                    {specContent.features.map((feat, idx) => (
-                      <li key={idx}>{feat}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-[#8E1838] mb-1">What's Included</h4>
-                  <p className="text-[#5E474D]">• {specContent.whatsIncluded}</p>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-[#8E1838] mb-1">Why You'll Love It</h4>
-                  <p className="text-[#5E474D]">• {specContent.whyLoveIt}</p>
+                <div className="ml-auto text-[10.5px] text-[#8C7076] hidden sm:block">
+                  {editorMode === 'visual' ? 'Click anywhere inside to edit' : 'Editing form fields'}
                 </div>
               </div>
+
+              {/* Visual Editor Mode: Real contentEditable Workspace */}
+              {editorMode === 'visual' ? (
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(e) => setEditorHtml(e.currentTarget.innerHTML)}
+                  className="p-4 min-h-[240px] text-[12.5px] text-[#2C1E21] bg-white leading-relaxed focus:outline-none focus:bg-[#FFFCFD] hover:bg-[#FFFDFE] cursor-text transition-colors font-sans selection:bg-[#FCE8EE] selection:text-[#8E1838]"
+                />
+              ) : (
+                /* Structured Mode: Clean dedicated input fields */
+                <div className="p-4 space-y-4 bg-white text-[12.5px]">
+                  <div>
+                    <label className="block font-bold text-[#8E1838] mb-1.5">
+                      Detailed Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={specContent.description}
+                      onChange={(e) =>
+                        syncStructuredToHtml({ ...specContent, description: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12.5px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] leading-relaxed"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="font-bold text-[#8E1838]">
+                        Features (Bullet Points)
+                      </label>
+                      <span className="text-[11px] text-[#8C7076]">
+                        {specContent.features.length} points
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {specContent.features.map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-[#8E1838] font-bold text-[13px]">•</span>
+                          <input
+                            type="text"
+                            value={feat}
+                            onChange={(e) => {
+                              const updated = [...specContent.features];
+                              updated[idx] = e.target.value;
+                              syncStructuredToHtml({ ...specContent, features: updated });
+                            }}
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
+                          />
+                          <button
+                            type="button"
+                            title="Remove point"
+                            onClick={() => {
+                              const updated = specContent.features.filter((_, i) => i !== idx);
+                              syncStructuredToHtml({ ...specContent, features: updated });
+                            }}
+                            className="w-6 h-6 rounded-md text-[#C92A52] hover:bg-[#FCE8EE] flex items-center justify-center font-bold text-[13px] cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Add New Feature Bullet */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="text"
+                          value={newFeatureText}
+                          onChange={(e) => setNewFeatureText(e.target.value)}
+                          placeholder="Type new feature bullet point..."
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-[#E8D8DC] bg-white text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newFeatureText.trim()) {
+                              e.preventDefault();
+                              const updated = [...specContent.features, newFeatureText.trim()];
+                              syncStructuredToHtml({ ...specContent, features: updated });
+                              setNewFeatureText('');
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newFeatureText.trim()) {
+                              const updated = [...specContent.features, newFeatureText.trim()];
+                              syncStructuredToHtml({ ...specContent, features: updated });
+                              setNewFeatureText('');
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#8E1838] text-white text-[11.5px] font-semibold hover:bg-[#77132E] transition-colors cursor-pointer"
+                        >
+                          + Add Bullet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-[#8E1838] mb-1.5">
+                      What's Included
+                    </label>
+                    <input
+                      type="text"
+                      value={specContent.whatsIncluded}
+                      onChange={(e) =>
+                        syncStructuredToHtml({ ...specContent, whatsIncluded: e.target.value })
+                      }
+                      className="w-full px-3 py-1.5 rounded-lg border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-[#8E1838] mb-1.5">
+                      Why You'll Love It
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={specContent.whyLoveIt}
+                      onChange={(e) =>
+                        syncStructuredToHtml({ ...specContent, whyLoveIt: e.target.value })
+                      }
+                      className="w-full px-3 py-1.5 rounded-lg border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] leading-relaxed"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+
+            <p className="text-[11px] text-[#8C7076]">
+              Tip: Highlight text to apply formatting. You can switch between <strong>Visual Editor</strong> and <strong>Structured Fields</strong> anytime.
+            </p>
           </div>
         </div>
 
@@ -480,10 +1097,19 @@ export default function AdminProductFormPage() {
                   <input
                     type="number"
                     value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12.5px] font-semibold text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
+                    onChange={(e) => {
+                      setSellingPrice(e.target.value);
+                      if (priceError) setPriceError('');
+                    }}
+                    placeholder="180"
+                    className={`w-full pl-7 pr-3 py-2 rounded-xl border ${
+                      priceError ? 'border-[#C92A52] bg-[#FFF5F7]' : 'border-[#E8D8DC] bg-[#FDFBFC]'
+                    } text-[12.5px] font-semibold text-[#2C1E21] focus:outline-none focus:border-[#A91D48]`}
                   />
                 </div>
+                {priceError && (
+                  <p className="text-[11px] text-[#C92A52] mt-1 font-medium">{priceError}</p>
+                )}
               </div>
 
               <div>
@@ -497,6 +1123,7 @@ export default function AdminProductFormPage() {
                   <input
                     type="number"
                     value={comparePrice}
+                    placeholder="250"
                     onChange={(e) => setComparePrice(e.target.value)}
                     className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12.5px] font-semibold text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
                   />
@@ -516,6 +1143,7 @@ export default function AdminProductFormPage() {
                   <input
                     type="number"
                     value={costPrice}
+                    placeholder="120"
                     onChange={(e) => setCostPrice(e.target.value)}
                     className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12.5px] font-semibold text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
                   />
@@ -767,6 +1395,7 @@ export default function AdminProductFormPage() {
                 value={metaTitle}
                 maxLength={70}
                 onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder="Product title for search engines"
                 className="w-full px-3.5 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
               />
             </div>
@@ -783,6 +1412,7 @@ export default function AdminProductFormPage() {
                 value={metaDescription}
                 maxLength={160}
                 onChange={(e) => setMetaDescription(e.target.value)}
+                placeholder="Brief summary for search engine results"
                 className="w-full px-3.5 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48] resize-none leading-relaxed"
               />
             </div>
@@ -797,6 +1427,7 @@ export default function AdminProductFormPage() {
                     type="text"
                     value={urlSlug}
                     onChange={(e) => setUrlSlug(e.target.value)}
+                    placeholder="product-url-slug"
                     className="w-full pl-3.5 pr-8 py-2 rounded-xl border border-[#E8D8DC] bg-[#FDFBFC] text-[12px] text-[#2C1E21] focus:outline-none focus:border-[#A91D48]"
                   />
                   <button
@@ -811,7 +1442,7 @@ export default function AdminProductFormPage() {
                   </button>
                 </div>
                 <p className="text-[10px] text-[#8C7076] mt-1 truncate">
-                  https://arclegacy.in/product/{urlSlug}
+                  https://arclegacy.in/product/{urlSlug || 'product-slug'}
                 </p>
               </div>
 

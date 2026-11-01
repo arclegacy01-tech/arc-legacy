@@ -12,6 +12,11 @@ import cmsRoutes from './routes/cms.js';
 import paymentRoutes from './routes/payments.js';
 import wholesaleRoutes from './routes/wholesale.js';
 import uploadRoutes from './routes/uploads.js';
+import adminRoutes from './routes/admin.js';
+import { ensureCategoriesAndSubcategories } from './utils/categorySeed.js';
+import { ensureAdminBaselineData } from './utils/ensureAdminData.js';
+
+let dataInitialized = false;
 
 const app = express();
 
@@ -63,12 +68,18 @@ app.get(['/api/health', '/health'], async (req, res) => {
 app.use(async (req, res, next) => {
   try {
     await connectDB();
+    if (!dataInitialized) {
+      dataInitialized = true;
+      ensureCategoriesAndSubcategories().catch((e) => console.warn('Category sync:', e.message));
+      ensureAdminBaselineData().catch((e) => console.warn('Admin data sync:', e.message));
+    }
     next();
   } catch (err) {
     next(err);
   }
 });
 
+app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);

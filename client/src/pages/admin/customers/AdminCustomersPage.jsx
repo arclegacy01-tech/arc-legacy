@@ -1,221 +1,118 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../../components/admin/AdminIcons.jsx';
+import { fetchAdminCustomers } from '../../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../../hooks/useAdminSync.js';
+import { formatPrice } from '../../../utils/format.js';
 
-const INITIAL_CUSTOMERS = [
-  {
-    id: 1,
-    name: 'Pooja Shah',
-    code: '#CUS001',
-    initials: 'PS',
-    avatarBg: '#FDF2F4',
-    avatarColor: '#B8294B',
-    email: 'pooja.shah@gmail.com',
-    phone: '+91 98765 43210',
-    orders: 12,
-    totalSpent: '₹15,620',
-    lastOrder: '14 Oct 2026',
-    group: 'VIP',
-    groupBg: '#FCE8EE',
-    groupColor: '#B8294B',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 2,
-    name: 'Neha Patel',
-    code: '#CUS002',
-    initials: 'NP',
-    avatarBg: '#FFF4E5',
-    avatarColor: '#D9822B',
-    email: 'neha.patel@gmail.com',
-    phone: '+91 98765 43211',
-    orders: 8,
-    totalSpent: '₹9,840',
-    lastOrder: '13 Oct 2026',
-    group: 'Regular',
-    groupBg: '#E8F2FC',
-    groupColor: '#2563EB',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 3,
-    name: 'Riya Mehta',
-    code: '#CUS003',
-    initials: 'RM',
-    avatarBg: '#F3EBFF',
-    avatarColor: '#7C4DFF',
-    email: 'riya.mehta@gmail.com',
-    phone: '+91 98765 43212',
-    orders: 5,
-    totalSpent: '₹6,520',
-    lastOrder: '12 Oct 2026',
-    group: 'Regular',
-    groupBg: '#E8F2FC',
-    groupColor: '#2563EB',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 4,
-    name: 'Aarti Desai',
-    code: '#CUS004',
-    initials: 'AD',
-    avatarBg: '#E6F6EC',
-    avatarColor: '#1E824C',
-    email: 'aarti.desai@gmail.com',
-    phone: '+91 98765 43213',
-    orders: 3,
-    totalSpent: '₹3,980',
-    lastOrder: '11 Oct 2026',
-    group: 'New',
-    groupBg: '#FFF4E5',
-    groupColor: '#D9822B',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 5,
-    name: 'Kunal Jain',
-    code: '#CUS005',
-    initials: 'KJ',
-    avatarBg: '#E8F2FC',
-    avatarColor: '#2563EB',
-    email: 'kunal.jain@gmail.com',
-    phone: '+91 98765 43214',
-    orders: 7,
-    totalSpent: '₹8,960',
-    lastOrder: '10 Oct 2026',
-    group: 'Regular',
-    groupBg: '#E8F2FC',
-    groupColor: '#2563EB',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 6,
-    name: 'Sneha Patel',
-    code: '#CUS006',
-    initials: 'SP',
-    avatarBg: '#FDF2F4',
-    avatarColor: '#B8294B',
-    email: 'sneha.patel@gmail.com',
-    phone: '+91 98765 43215',
-    orders: 10,
-    totalSpent: '₹12,430',
-    lastOrder: '09 Oct 2026',
-    group: 'VIP',
-    groupBg: '#FCE8EE',
-    groupColor: '#B8294B',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 7,
-    name: 'Mehul Trivedi',
-    code: '#CUS007',
-    initials: 'MT',
-    avatarBg: '#F1F3F5',
-    avatarColor: '#64748B',
-    email: 'mehul.trivedi@gmail.com',
-    phone: '+91 98765 43216',
-    orders: 2,
-    totalSpent: '₹2,150',
-    lastOrder: '08 Oct 2026',
-    group: 'New',
-    groupBg: '#FFF4E5',
-    groupColor: '#D9822B',
-    status: 'Inactive',
-    statusBg: '#FCE8EE',
-    statusColor: '#C8234B',
-  },
-  {
-    id: 8,
-    name: 'Pooja Kulkarni',
-    code: '#CUS008',
-    initials: 'PK',
-    avatarBg: '#FFF4E5',
-    avatarColor: '#D9822B',
-    email: 'pooja.kulkarni@gmail.com',
-    phone: '+91 98765 43217',
-    orders: 6,
-    totalSpent: '₹7,890',
-    lastOrder: '07 Oct 2026',
-    group: 'Regular',
-    groupBg: '#E8F2FC',
-    groupColor: '#2563EB',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 9,
-    name: 'Rohan Sharma',
-    code: '#CUS009',
-    initials: 'RS',
-    avatarBg: '#E8F2FC',
-    avatarColor: '#2563EB',
-    email: 'rohan.sharma@gmail.com',
-    phone: '+91 98765 43218',
-    orders: 4,
-    totalSpent: '₹4,760',
-    lastOrder: '06 Oct 2026',
-    group: 'Regular',
-    groupBg: '#E8F2FC',
-    groupColor: '#2563EB',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
-  {
-    id: 10,
-    name: 'Vidhi Dave',
-    code: '#CUS010',
-    initials: 'VD',
-    avatarBg: '#FCE8EE',
-    avatarColor: '#B8294B',
-    email: 'vidhi.dave@gmail.com',
-    phone: '+91 98765 43219',
-    orders: 9,
-    totalSpent: '₹11,240',
-    lastOrder: '05 Oct 2026',
-    group: 'VIP',
-    groupBg: '#FCE8EE',
-    groupColor: '#B8294B',
-    status: 'Active',
-    statusBg: '#E6F6EC',
-    statusColor: '#1E824C',
-  },
+const PALETTE = [
+  { bg: '#FDF2F4', color: '#B8294B' },
+  { bg: '#FFF4E5', color: '#D9822B' },
+  { bg: '#E8F2FC', color: '#2563EB' },
+  { bg: '#E6F6EC', color: '#1E824C' },
+  { bg: '#F3EBFF', color: '#7C4DFF' },
+  { bg: '#FCE8EE', color: '#C8234B' },
 ];
 
-const TOP_CUSTOMERS = [
-  { rank: 1, name: 'Pooja Shah', orders: '12 orders', spent: '₹15,620', initials: 'PS', bg: '#FDF2F4', color: '#B8294B' },
-  { rank: 2, name: 'Sneha Patel', orders: '10 orders', spent: '₹12,430', initials: 'SP', bg: '#FFF4E5', color: '#D9822B' },
-  { rank: 3, name: 'Vidhi Dave', orders: '9 orders', spent: '₹11,240', initials: 'VD', bg: '#F3EBFF', color: '#7C4DFF' },
-  { rank: 4, name: 'Neha Patel', orders: '8 orders', spent: '₹9,840', initials: 'NP', bg: '#E6F6EC', color: '#1E824C' },
-  { rank: 5, name: 'Kunal Jain', orders: '7 orders', spent: '₹8,960', initials: 'KJ', bg: '#E8F2FC', color: '#2563EB' },
-];
+function mapDbCustomer(u, index) {
+  const p = PALETTE[index % PALETTE.length];
+  const name = u.name || 'Customer';
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'CU';
 
-const RECENT_CUSTOMERS = [
-  { name: 'Aarti Desai', joined: 'Joined 14 Oct 2026', initials: 'AD', bg: '#FDF2F4', color: '#B8294B' },
-  { name: 'Rohan Verma', joined: 'Joined 13 Oct 2026', initials: 'RV', bg: '#E8F2FC', color: '#2563EB' },
-  { name: 'Kavya Shah', joined: 'Joined 12 Oct 2026', initials: 'KS', bg: '#FFF4E5', color: '#D9822B' },
-  { name: 'Tanvi Mehta', joined: 'Joined 12 Oct 2026', initials: 'TM', bg: '#F3EBFF', color: '#7C4DFF' },
-  { name: 'Jay Patel', joined: 'Joined 11 Oct 2026', initials: 'JP', bg: '#E6F6EC', color: '#1E824C' },
-];
+  const orderCount = u.orderCount || 0;
+  const spent = u.totalSpent || 0;
+  const group = orderCount >= 8 || spent >= 10000 ? 'VIP' : orderCount >= 1 ? 'Regular' : 'New';
+
+  const groupStyle =
+    group === 'VIP'
+      ? { bg: '#FCE8EE', color: '#B8294B' }
+      : group === 'New'
+        ? { bg: '#FFF4E5', color: '#D9822B' }
+        : { bg: '#E8F2FC', color: '#2563EB' };
+
+  const lastOrderDate = u.lastOrderDate
+    ? new Date(u.lastOrderDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'No orders yet';
+
+  return {
+    id: u._id,
+    mongoId: u._id,
+    name,
+    code: `#CUS${String(index + 1).padStart(3, '0')}`,
+    initials,
+    avatarBg: p.bg,
+    avatarColor: p.color,
+    email: u.email || 'N/A',
+    phone: u.phone || '+91 98765 43210',
+    orders: orderCount,
+    totalSpent: formatPrice(spent),
+    numSpent: spent,
+    lastOrder: lastOrderDate,
+    group,
+    groupBg: groupStyle.bg,
+    groupColor: groupStyle.color,
+    status: 'Active',
+    statusBg: '#E6F6EC',
+    statusColor: '#1E824C',
+    createdAt: u.createdAt,
+    raw: u,
+  };
+}
 
 export default function AdminCustomersPage() {
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
 
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const { data: dbData, loading, refresh } = useAdminAutoRefresh(
+    () => fetchAdminCustomers(),
+    ['customer_created', 'order_created', 'order_updated']
+  );
+
+  const customers = useMemo(() => {
+    const rawList = dbData?.customers || [];
+    return rawList.map(mapDbCustomer);
+  }, [dbData]);
+
+  const topCustomers = useMemo(() => {
+    return [...customers]
+      .sort((a, b) => (b.numSpent || 0) - (a.numSpent || 0))
+      .slice(0, 5)
+      .map((c, i) => ({
+        rank: i + 1,
+        name: c.name,
+        orders: `${c.orders} order${c.orders === 1 ? '' : 's'}`,
+        spent: c.totalSpent,
+        initials: c.initials,
+        bg: c.avatarBg,
+        color: c.avatarColor,
+      }));
+  }, [customers]);
+
+  const recentCustomers = useMemo(() => {
+    return [...customers]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5)
+      .map((c) => ({
+        name: c.name,
+        joined: c.createdAt ? `Joined ${new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Joined recently',
+        initials: c.initials,
+        bg: c.avatarBg,
+        color: c.avatarColor,
+      }));
+  }, [customers]);
+
+  const totalCustomersCount = customers.length;
+  const newCustomersCount = customers.filter((c) => c.group === 'New').length;
+  const repeatCustomersCount = customers.filter((c) => c.orders >= 2).length;
+  const totalRevenueAll = customers.reduce((s, c) => s + (c.numSpent || 0), 0);
+  const avgOrderValue = totalCustomersCount > 0 ? Math.round(totalRevenueAll / totalCustomersCount) : 0;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('All Customer Groups');
   const [orderFilter, setOrderFilter] = useState('All Order Count');
@@ -356,13 +253,12 @@ export default function AdminCustomersPage() {
               <div>
                 <p className="text-[11.5px] text-[#4A6B8C] font-medium">Total Customers</p>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">1,248</span>
+                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">{totalCustomersCount}</span>
                   <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={11} strokeWidth={2.3} />
-                    12%
+                    Live
                   </span>
                 </div>
-                <p className="text-[10.5px] text-[#6C849D] mt-1">vs last month</p>
+                <p className="text-[10.5px] text-[#6C849D] mt-1">in database</p>
               </div>
             </div>
 
@@ -374,13 +270,9 @@ export default function AdminCustomersPage() {
               <div>
                 <p className="text-[11.5px] text-[#4A6B8C] font-medium">New Customers</p>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">186</span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={11} strokeWidth={2.3} />
-                    28%
-                  </span>
+                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">{newCustomersCount}</span>
                 </div>
-                <p className="text-[10.5px] text-[#6C849D] mt-1">this month</p>
+                <p className="text-[10.5px] text-[#6C849D] mt-1">recently joined</p>
               </div>
             </div>
 
@@ -392,13 +284,9 @@ export default function AdminCustomersPage() {
               <div>
                 <p className="text-[11.5px] text-[#4A6B8C] font-medium">Repeat Customers</p>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">312</span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={11} strokeWidth={2.3} />
-                    18%
-                  </span>
+                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">{repeatCustomersCount}</span>
                 </div>
-                <p className="text-[10.5px] text-[#6C849D] mt-1">(2+ orders)</p>
+                <p className="text-[10.5px] text-[#6C849D] mt-1">(2+ orders placed)</p>
               </div>
             </div>
 
@@ -408,15 +296,11 @@ export default function AdminCustomersPage() {
                 <AdminIcon name="rupee" size={20} />
               </div>
               <div>
-                <p className="text-[11.5px] text-[#4A6B8C] font-medium">Average Order Value</p>
+                <p className="text-[11.5px] text-[#4A6B8C] font-medium">Average Spend</p>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">₹1,260</span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={11} strokeWidth={2.3} />
-                    25%
-                  </span>
+                  <span className="text-[22px] font-bold text-[#142C4C] leading-none">{formatPrice(avgOrderValue)}</span>
                 </div>
-                <p className="text-[10.5px] text-[#6C849D] mt-1">per customer</p>
+                <p className="text-[10.5px] text-[#6C849D] mt-1">per registered customer</p>
               </div>
             </div>
           </div>
@@ -785,33 +669,37 @@ export default function AdminCustomersPage() {
             </div>
 
             <div className="space-y-2.5">
-              {TOP_CUSTOMERS.map((cust) => (
-                <div
-                  key={cust.rank}
-                  className="flex items-center justify-between gap-2.5 py-1 border-b border-[#F8EEF0] last:border-0"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-4 text-[11px] font-semibold text-[#6C849D]">
-                      {cust.rank}
+              {topCustomers.length === 0 ? (
+                <div className="text-center py-4 text-xs text-[#7A93AC]">No customer spending data yet</div>
+              ) : (
+                topCustomers.map((cust) => (
+                  <div
+                    key={cust.rank}
+                    className="flex items-center justify-between gap-2.5 py-1 border-b border-[#F8EEF0] last:border-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-4 text-[11px] font-semibold text-[#6C849D]">
+                        {cust.rank}
+                      </span>
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                        style={{ backgroundColor: cust.bg, color: cust.color }}
+                      >
+                        {cust.initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11.5px] font-semibold text-[#1E3A5F] truncate">
+                          {cust.name}
+                        </p>
+                        <p className="text-[10px] text-[#6C849D]">{cust.orders}</p>
+                      </div>
+                    </div>
+                    <span className="text-[11.5px] font-bold text-[#1E3A5F] shrink-0">
+                      {cust.spent}
                     </span>
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                      style={{ backgroundColor: cust.bg, color: cust.color }}
-                    >
-                      {cust.initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11.5px] font-semibold text-[#1E3A5F] truncate">
-                        {cust.name}
-                      </p>
-                      <p className="text-[10px] text-[#6C849D]">{cust.orders}</p>
-                    </div>
                   </div>
-                  <span className="text-[11.5px] font-bold text-[#1E3A5F] shrink-0">
-                    {cust.spent}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -840,33 +728,37 @@ export default function AdminCustomersPage() {
             </div>
 
             <div className="space-y-2.5">
-              {RECENT_CUSTOMERS.map((cust, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between gap-2.5 py-1 border-b border-[#F8EEF0] last:border-0"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                      style={{ backgroundColor: cust.bg, color: cust.color }}
-                    >
-                      {cust.initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11.5px] font-semibold text-[#1E3A5F] truncate">
-                        {cust.name}
-                      </p>
-                      <p className="text-[10px] text-[#6C849D]">{cust.joined}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-[#B8294B] hover:bg-[#FDF2F4] p-1 rounded cursor-pointer"
+              {recentCustomers.length === 0 ? (
+                <div className="text-center py-4 text-xs text-[#7A93AC]">No registered customers yet</div>
+              ) : (
+                recentCustomers.map((cust, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2.5 py-1 border-b border-[#F8EEF0] last:border-0"
                   >
-                    <AdminIcon name="more-vertical" size={12} />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                        style={{ backgroundColor: cust.bg, color: cust.color }}
+                      >
+                        {cust.initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11.5px] font-semibold text-[#1E3A5F] truncate">
+                          {cust.name}
+                        </p>
+                        <p className="text-[10px] text-[#6C849D]">{cust.joined}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-[#B8294B] hover:bg-[#FDF2F4] p-1 rounded cursor-pointer"
+                    >
+                      <AdminIcon name="more-vertical" size={12} />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

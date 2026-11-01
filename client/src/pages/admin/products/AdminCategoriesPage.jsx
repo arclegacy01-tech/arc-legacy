@@ -1,125 +1,37 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../../components/admin/AdminIcons.jsx';
-
-const INITIAL_CATEGORIES = [
-  {
-    id: 1,
-    rowNum: 1,
-    name: 'Laces',
-    image: '/images/product-1.jpg',
-    products: 68,
-    status: 'Active',
-    displayOrder: 1,
-    createdDate: '16 Oct 2026',
-    createdTime: '10:24 AM',
-  },
-  {
-    id: 2,
-    rowNum: 2,
-    name: 'Latkans',
-    image: '/images/product-2.jpg',
-    products: 42,
-    status: 'Active',
-    displayOrder: 2,
-    createdDate: '14 Oct 2026',
-    createdTime: '03:15 PM',
-  },
-  {
-    id: 3,
-    rowNum: 3,
-    name: 'Trims & Borders',
-    image: '/images/product-4.jpg',
-    products: 54,
-    status: 'Active',
-    displayOrder: 3,
-    createdDate: '13 Oct 2026',
-    createdTime: '01:40 PM',
-  },
-  {
-    id: 4,
-    rowNum: 4,
-    name: 'Gota Patti',
-    image: '/images/product-8.jpg',
-    products: 32,
-    status: 'Active',
-    displayOrder: 4,
-    createdDate: '12 Oct 2026',
-    createdTime: '11:20 AM',
-  },
-  {
-    id: 5,
-    rowNum: 5,
-    name: 'Pom Pom Trims',
-    image: '/images/product-3.jpg',
-    products: 28,
-    status: 'Active',
-    displayOrder: 5,
-    createdDate: '11 Oct 2026',
-    createdTime: '05:08 PM',
-  },
-  {
-    id: 6,
-    rowNum: 6,
-    name: 'Embellishments',
-    image: '/images/product-5.jpg',
-    products: 40,
-    status: 'Active',
-    displayOrder: 6,
-    createdDate: '10 Oct 2026',
-    createdTime: '12:18 PM',
-  },
-  {
-    id: 7,
-    rowNum: 7,
-    name: 'Appliques & Patches',
-    image: '/images/product-7.jpg',
-    products: 18,
-    status: 'Active',
-    displayOrder: 7,
-    createdDate: '09 Oct 2026',
-    createdTime: '04:32 PM',
-  },
-  {
-    id: 8,
-    rowNum: 8,
-    name: 'Designer Collections',
-    image: '/images/product-6.jpg',
-    products: 12,
-    status: 'Active',
-    displayOrder: 8,
-    createdDate: '09 Oct 2026',
-    createdTime: '03:10 PM',
-  },
-  {
-    id: 9,
-    rowNum: 9,
-    name: 'Festive Collection',
-    image: '/images/product-9.jpg',
-    products: 16,
-    status: 'Active',
-    displayOrder: 9,
-    createdDate: '07 Oct 2026',
-    createdTime: '11:05 AM',
-  },
-  {
-    id: 10,
-    rowNum: 10,
-    name: 'New Arrivals',
-    image: '/images/product-10.jpg',
-    products: 8,
-    status: 'Active',
-    displayOrder: 10,
-    createdDate: '06 Oct 2026',
-    createdTime: '02:47 PM',
-  },
-];
+import { api } from '../../../api/client.js';
+import { useAdminAutoRefresh } from '../../../hooks/useAdminSync.js';
 
 export default function AdminCategoriesPage() {
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
 
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const { data: catData, loading, refresh } = useAdminAutoRefresh(
+    () => api('/categories?includeSubcategories=true'),
+    ['category_created', 'category_updated', 'product_created', 'product_updated']
+  );
+
+  const categories = useMemo(() => {
+    const raw = catData?.categories || [];
+    return raw.map((c, idx) => ({
+      id: c._id,
+      mongoId: c._id,
+      rowNum: idx + 1,
+      name: c.name,
+      slug: c.slug,
+      image: c.image || `/images/product-${(idx % 12) + 1}.jpg`,
+      products: c.productsCount || 0,
+      subcategories: c.subcategories || [],
+      status: 'Active',
+      displayOrder: idx + 1,
+      createdDate: c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Live',
+      createdTime: c.createdAt ? new Date(c.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
+      raw: c,
+    }));
+  }, [catData]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [sortBy, setSortBy] = useState('Created (Newest)');
@@ -282,35 +194,37 @@ export default function AdminCategoriesPage() {
                 <AdminIcon name="layers" size={22} />
               </div>
               <div>
-                <p className="text-[11.5px] font-medium text-[#7A6268]">Total Categories</p>
+                <p className="text-[11.5px] font-medium text-[#7A6268]">Main Categories</p>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">18</span>
+                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">{categories.length}</span>
                 </div>
               </div>
             </div>
 
-            {/* Active Categories */}
+            {/* Subcategories */}
             <div className="bg-white rounded-2xl border border-[#EFE0E4] p-4 shadow-[0_2px_10px_rgba(142,24,56,0.03)] flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-xl bg-[#E6F7EE] flex items-center justify-center text-[#1D8852] shrink-0">
+                <AdminIcon name="grid" size={22} />
+              </div>
+              <div>
+                <p className="text-[11.5px] font-medium text-[#7A6268]">Subcategories</p>
+                <div className="flex items-baseline gap-1.5 mt-0.5">
+                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">
+                    {categories.reduce((s, c) => s + (c.subcategories?.length || 0), 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Status */}
+            <div className="bg-white rounded-2xl border border-[#EFE0E4] p-4 shadow-[0_2px_10px_rgba(142,24,56,0.03)] flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-[#FDF2F5] flex items-center justify-center text-[#8E1838] shrink-0">
                 <AdminIcon name="check-circle" size={22} />
               </div>
               <div>
-                <p className="text-[11.5px] font-medium text-[#7A6268]">Active Categories</p>
+                <p className="text-[11.5px] font-medium text-[#7A6268]">Active Status</p>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">16</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Hidden Categories */}
-            <div className="bg-white rounded-2xl border border-[#EFE0E4] p-4 shadow-[0_2px_10px_rgba(142,24,56,0.03)] flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-[#FDE8EC] flex items-center justify-center text-[#C92A52] shrink-0">
-                <AdminIcon name="eye-off" size={22} />
-              </div>
-              <div>
-                <p className="text-[11.5px] font-medium text-[#7A6268]">Hidden Categories</p>
-                <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">2</span>
+                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">{categories.length}</span>
                 </div>
               </div>
             </div>
@@ -321,9 +235,11 @@ export default function AdminCategoriesPage() {
                 <AdminIcon name="box" size={22} />
               </div>
               <div>
-                <p className="text-[11.5px] font-medium text-[#7A6268]">Total Products</p>
+                <p className="text-[11.5px] font-medium text-[#7A6268]">Assigned Products</p>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">286</span>
+                  <span className="text-[24px] font-bold text-[#2C1E21] leading-none">
+                    {categories.reduce((s, c) => s + (c.products || 0), 0)}
+                  </span>
                 </div>
               </div>
             </div>

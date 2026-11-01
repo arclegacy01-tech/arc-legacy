@@ -1,204 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../components/admin/AdminIcons.jsx';
+import { fetchAdminOrders, updateAdminOrderStatus } from '../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../hooks/useAdminSync.js';
+import { formatPrice } from '../../utils/format.js';
 
-const INITIAL_ORDERS = [
-  {
-    id: 1,
-    orderId: '#1028',
-    customer: 'Pooja Shah',
-    phone: '+91 98765 43210',
-    thumbs: ['/images/product-1.jpg', '/images/product-2.jpg', '/images/product-3.jpg'],
-    extraCount: '+1',
-    itemsCount: '3 items',
-    amount: '₹1,240',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Processing',
-    stateBg: '#FFF4E5',
-    stateColor: '#D9822B',
-    date: '16 Oct 2026',
-    time: '10:24 AM',
-  },
-  {
-    id: 2,
-    orderId: '#1027',
-    customer: 'Neha Patel',
-    phone: '+91 98765 43211',
-    thumbs: ['/images/product-4.jpg', '/images/product-5.jpg', '/images/product-6.jpg'],
-    extraCount: '+1',
-    itemsCount: '5 items',
-    amount: '₹2,580',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Shipped',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '16 Oct 2026',
-    time: '09:18 AM',
-  },
-  {
-    id: 3,
-    orderId: '#1026',
-    customer: 'Riya Mehta',
-    phone: '+91 98765 43212',
-    thumbs: ['/images/product-2.jpg', '/images/product-7.jpg', '/images/product-8.jpg'],
-    extraCount: null,
-    itemsCount: '2 items',
-    amount: '₹980',
-    payment: 'COD',
-    paymentBg: '#FCE8EE',
-    paymentColor: '#C8234B',
-    state: 'Processing',
-    stateBg: '#FFF4E5',
-    stateColor: '#D9822B',
-    date: '16 Oct 2026',
-    time: '08:35 AM',
-  },
-  {
-    id: 4,
-    orderId: '#1025',
-    customer: 'Aarti Desai',
-    phone: '+91 98765 43213',
-    thumbs: ['/images/product-9.jpg', '/images/product-10.jpg', '/images/product-11.jpg'],
-    extraCount: null,
-    itemsCount: '4 items',
-    amount: '₹1,860',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Delivered',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '15 Oct 2026',
-    time: '06:42 PM',
-  },
-  {
-    id: 5,
-    orderId: '#1024',
-    customer: 'Kunal Jain',
-    phone: '+91 98765 43214',
-    thumbs: ['/images/product-3.jpg', '/images/product-5.jpg', '/images/product-12.jpg'],
-    extraCount: null,
-    itemsCount: '1 item',
-    amount: '₹650',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Shipped',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '15 Oct 2026',
-    time: '04:12 PM',
-  },
-  {
-    id: 6,
-    orderId: '#1023',
-    customer: 'Sneha Patel',
-    phone: '+91 98765 43215',
-    thumbs: ['/images/product-1.jpg', '/images/product-4.jpg', '/images/product-8.jpg'],
-    extraCount: '+2',
-    itemsCount: '6 items',
-    amount: '₹3,120',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Pending',
-    stateBg: '#FFF4E5',
-    stateColor: '#D9822B',
-    date: '14 Oct 2026',
-    time: '03:54 PM',
-  },
-  {
-    id: 7,
-    orderId: '#1022',
-    customer: 'Mehul Trivedi',
-    phone: '+91 98765 43216',
-    thumbs: ['/images/product-6.jpg', '/images/product-7.jpg'],
-    extraCount: null,
-    itemsCount: '2 items',
-    amount: '₹1,199',
-    payment: 'COD',
-    paymentBg: '#FCE8EE',
-    paymentColor: '#C8234B',
-    state: 'Shipped',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '14 Oct 2026',
-    time: '12:28 PM',
-  },
-  {
-    id: 8,
-    orderId: '#1021',
-    customer: 'Pooja Kulkarni',
-    phone: '+91 98765 43217',
-    thumbs: ['/images/product-2.jpg', '/images/product-9.jpg', '/images/product-10.jpg'],
-    extraCount: null,
-    itemsCount: '4 items',
-    amount: '₹2,450',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Delivered',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '13 Oct 2026',
-    time: '11:16 AM',
-  },
-  {
-    id: 9,
-    orderId: '#1020',
-    customer: 'Rohan Sharma',
-    phone: '+91 98765 43218',
-    thumbs: ['/images/product-1.jpg', '/images/product-3.jpg', '/images/product-11.jpg'],
-    extraCount: null,
-    itemsCount: '1 item',
-    amount: '₹899',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Cancelled',
-    stateBg: '#FCE8EE',
-    stateColor: '#C8234B',
-    date: '12 Oct 2026',
-    time: '05:48 PM',
-  },
-  {
-    id: 10,
-    orderId: '#1019',
-    customer: 'Vidhi Dave',
-    phone: '+91 98765 43219',
-    thumbs: ['/images/product-4.jpg', '/images/product-8.jpg', '/images/product-12.jpg'],
-    extraCount: '+1',
-    itemsCount: '3 items',
-    amount: '₹1,760',
-    payment: 'Paid',
-    paymentBg: '#E6F6EC',
-    paymentColor: '#1E824C',
-    state: 'Delivered',
-    stateBg: '#E6F6EC',
-    stateColor: '#1E824C',
-    date: '12 Oct 2026',
-    time: '01:22 PM',
-  },
-];
+function mapDbOrder(o, index) {
+  const statusStr = (o.status || 'pending').toLowerCase();
+  const stateCapitalized = statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
+  const isPaid = (o.paymentStatus || '').toLowerCase() === 'paid';
+  const isCod = (o.paymentMethod || '').toLowerCase() === 'cod';
 
-const RECENT_ORDERS = [
-  { orderId: '#1028', customer: 'Pooja Shah', amount: '₹1,240', state: 'Processing', stateBg: '#FFF4E5', stateColor: '#D9822B', thumb: '/images/product-1.jpg' },
-  { orderId: '#1027', customer: 'Neha Patel', amount: '₹2,580', state: 'Shipped', stateBg: '#E6F6EC', stateColor: '#1E824C', thumb: '/images/product-4.jpg' },
-  { orderId: '#1026', customer: 'Riya Mehta', amount: '₹980', state: 'Processing', stateBg: '#FFF4E5', stateColor: '#D9822B', thumb: '/images/product-2.jpg' },
-  { orderId: '#1025', customer: 'Aarti Desai', amount: '₹1,860', state: 'Delivered', stateBg: '#E6F6EC', stateColor: '#1E824C', thumb: '/images/product-9.jpg' },
-  { orderId: '#1024', customer: 'Kunal Jain', amount: '₹650', state: 'Shipped', stateBg: '#E6F6EC', stateColor: '#1E824C', thumb: '/images/product-5.jpg' },
-];
+  const styleMap = {
+    pending: { bg: '#FFF4E5', color: '#D9822B' },
+    processing: { bg: '#FFF4E5', color: '#D9822B' },
+    shipped: { bg: '#EBF5FB', color: '#2980B9' },
+    delivered: { bg: '#E6F6EC', color: '#1E824C' },
+    cancelled: { bg: '#FCE8EE', color: '#C8234B' },
+  };
+  const st = styleMap[statusStr] || styleMap.pending;
+
+  const d = o.createdAt ? new Date(o.createdAt) : new Date();
+  const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeFormatted = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  const items = o.items || [];
+  const thumbs = items.map((it) => it.image || it.product?.images?.[0] || '/images/product-1.jpg').slice(0, 3);
+  if (thumbs.length === 0) thumbs.push('/images/product-1.jpg');
+
+  return {
+    id: o._id,
+    mongoId: o._id,
+    orderId: `#${o.orderNumber || o._id.slice(-4).toUpperCase()}`,
+    customer: o.customerName || (o.shippingAddress ? `${o.shippingAddress.firstName || ''} ${o.shippingAddress.lastName || ''}`.trim() : '') || o.user?.name || 'Customer',
+    phone: o.shippingAddress?.phone || o.customerPhone || '+91 98765 43210',
+    thumbs,
+    extraCount: items.length > 3 ? `+${items.length - 3}` : null,
+    itemsCount: `${items.length || 1} item${items.length === 1 ? '' : 's'}`,
+    amount: formatPrice(o.total || 0),
+    numAmount: o.total || 0,
+    payment: isCod ? 'COD' : isPaid ? 'Paid' : 'Pending',
+    paymentBg: isPaid ? '#E6F6EC' : '#FCE8EE',
+    paymentColor: isPaid ? '#1E824C' : '#C8234B',
+    state: stateCapitalized,
+    stateBg: st.bg,
+    stateColor: st.color,
+    date: dateFormatted,
+    time: timeFormatted,
+    raw: o,
+  };
+}
 
 export default function AdminOrdersPage() {
   const { pathname } = useLocation();
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
 
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const { data: dbData, loading, refresh } = useAdminAutoRefresh(
+    () => fetchAdminOrders(),
+    ['order_created', 'order_updated']
+  );
+
+  const orders = useMemo(() => {
+    const rawOrders = dbData?.orders || [];
+    return rawOrders.map(mapDbOrder);
+  }, [dbData]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [paymentFilter, setPaymentFilter] = useState('All Payment Methods');
@@ -269,29 +136,28 @@ export default function AdminOrdersPage() {
     showToast('Orders exported to CSV.');
   };
 
-  const handleCycleState = (id) => {
-    const cycle = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-    const styleMap = {
-      Pending: { bg: '#FFF4E5', color: '#D9822B' },
-      Processing: { bg: '#FFF4E5', color: '#D9822B' },
-      Shipped: { bg: '#E6F6EC', color: '#1E824C' },
-      Delivered: { bg: '#E6F6EC', color: '#1E824C' },
-      Cancelled: { bg: '#FCE8EE', color: '#C8234B' },
-    };
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id !== id) return o;
-        const nextState = cycle[(cycle.indexOf(o.state) + 1) % cycle.length];
-        return {
-          ...o,
-          state: nextState,
-          stateBg: styleMap[nextState].bg,
-          stateColor: styleMap[nextState].color,
-        };
-      })
-    );
-    showToast('Order status updated.');
+  const handleCycleState = async (id) => {
+    const cycle = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const cur = orders.find((o) => o.id === id);
+    if (!cur) return;
+    const curState = (cur.state || 'pending').toLowerCase();
+    const nextState = cycle[(cycle.indexOf(curState) + 1) % cycle.length];
+    try {
+      await updateAdminOrderStatus(cur.mongoId || id, nextState);
+      showToast(`Order status updated to ${nextState.charAt(0).toUpperCase() + nextState.slice(1)}.`);
+      refresh();
+    } catch (err) {
+      showToast('Failed to update order status.');
+    }
   };
+
+  const totalCount = orders.length;
+  const pendingCount = orders.filter((o) => o.state.toLowerCase() === 'pending').length;
+  const processingCount = orders.filter((o) => o.state.toLowerCase() === 'processing').length;
+  const shippedCount = orders.filter((o) => o.state.toLowerCase() === 'shipped').length;
+  const deliveredCount = orders.filter((o) => o.state.toLowerCase() === 'delivered').length;
+  const cancelledCount = orders.filter((o) => o.state.toLowerCase() === 'cancelled').length;
+  const recentOrdersList = orders.slice(0, 5);
 
   const breadcrumbLabel = pathname.endsWith('/pending')
     ? 'Pending Orders'
@@ -367,13 +233,12 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Total Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">128</span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{totalCount}</span>
                   <span className="inline-flex items-center text-[10px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={9} strokeWidth={2.4} />
-                    12%
+                    Live
                   </span>
                 </div>
-                <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">vs last month</p>
+                <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">in database</p>
               </div>
             </div>
 
@@ -388,11 +253,7 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Pending Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">24</span>
-                  <span className="inline-flex items-center text-[10px] font-semibold text-[#D94B4B]">
-                    <AdminIcon name="arrow-down" size={9} strokeWidth={2.4} />
-                    8%
-                  </span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{pendingCount}</span>
                 </div>
                 <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">awaiting confirmation</p>
               </div>
@@ -409,11 +270,7 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Processing Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">18</span>
-                  <span className="inline-flex items-center text-[10px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={9} strokeWidth={2.4} />
-                    20%
-                  </span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{processingCount}</span>
                 </div>
                 <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">being prepared</p>
               </div>
@@ -430,11 +287,7 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Shipped Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">46</span>
-                  <span className="inline-flex items-center text-[10px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={9} strokeWidth={2.4} />
-                    15%
-                  </span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{shippedCount}</span>
                 </div>
                 <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">in transit</p>
               </div>
@@ -451,11 +304,7 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Delivered Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">36</span>
-                  <span className="inline-flex items-center text-[10px] font-semibold text-[#1E824C]">
-                    <AdminIcon name="arrow-up" size={9} strokeWidth={2.4} />
-                    28%
-                  </span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{deliveredCount}</span>
                 </div>
                 <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">completed</p>
               </div>
@@ -472,13 +321,9 @@ export default function AdminOrdersPage() {
               <div className="min-w-0">
                 <p className="text-[10.5px] text-[#4A6B8C] font-medium truncate">Cancelled Orders</p>
                 <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">4</span>
-                  <span className="inline-flex items-center text-[10px] font-semibold text-[#D94B4B]">
-                    <AdminIcon name="arrow-down" size={9} strokeWidth={2.4} />
-                    33%
-                  </span>
+                  <span className="text-[19px] font-bold text-[#142C4C] leading-none">{cancelledCount}</span>
                 </div>
-                <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">cancelled by customer</p>
+                <p className="text-[9.5px] text-[#6C849D] mt-0.5 truncate">cancelled</p>
               </div>
             </Link>
           </div>
@@ -806,18 +651,18 @@ export default function AdminOrdersPage() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-tight">
-                  <span className="text-[16px] font-bold text-[#142C4C]">128</span>
+                  <span className="text-[16px] font-bold text-[#142C4C]">{totalCount}</span>
                   <span className="text-[9.5px] text-[#4A6B8C]">Total Orders</span>
                 </div>
               </div>
 
               <div className="space-y-1.5 flex-1 text-[10.5px]">
                 {[
-                  { label: 'Pending', count: '24 (19%)', color: '#F48FB1' },
-                  { label: 'Processing', count: '18 (14%)', color: '#FFE082' },
-                  { label: 'Shipped', count: '46 (36%)', color: '#66BB6A' },
-                  { label: 'Delivered', count: '36 (28%)', color: '#43A047' },
-                  { label: 'Cancelled', count: '4 (3%)', color: '#E57373' },
+                  { label: 'Pending', count: `${pendingCount} (${totalCount ? Math.round((pendingCount / totalCount) * 100) : 0}%)`, color: '#F48FB1' },
+                  { label: 'Processing', count: `${processingCount} (${totalCount ? Math.round((processingCount / totalCount) * 100) : 0}%)`, color: '#FFE082' },
+                  { label: 'Shipped', count: `${shippedCount} (${totalCount ? Math.round((shippedCount / totalCount) * 100) : 0}%)`, color: '#66BB6A' },
+                  { label: 'Delivered', count: `${deliveredCount} (${totalCount ? Math.round((deliveredCount / totalCount) * 100) : 0}%)`, color: '#43A047' },
+                  { label: 'Cancelled', count: `${cancelledCount} (${totalCount ? Math.round((cancelledCount / totalCount) * 100) : 0}%)`, color: '#E57373' },
                 ].map((s) => (
                   <div key={s.label} className="flex items-start gap-1.5">
                     <span
@@ -858,33 +703,37 @@ export default function AdminOrdersPage() {
             </div>
 
             <div className="space-y-2.5">
-              {RECENT_ORDERS.map((ord) => (
-                <div
-                  key={ord.orderId}
-                  className="flex items-center justify-between gap-2 py-1 border-b border-[#F8EEF0] last:border-0"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#E5E7EB] shrink-0 bg-[#FAF7F5]">
-                      <img src={ord.thumb} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#1E3A5F] leading-tight">
-                        {ord.orderId}
-                      </p>
-                      <p className="text-[10px] text-[#6C849D] truncate">{ord.customer}</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#1E3A5F] shrink-0">
-                    {ord.amount}
-                  </span>
-                  <span
-                    className="px-2 py-0.5 rounded text-[9.5px] font-semibold shrink-0"
-                    style={{ backgroundColor: ord.stateBg, color: ord.stateColor }}
+              {recentOrdersList.length === 0 ? (
+                <div className="text-center py-4 text-xs text-[#7A93AC]">No orders yet</div>
+              ) : (
+                recentOrdersList.map((ord) => (
+                  <div
+                    key={ord.id}
+                    className="flex items-center justify-between gap-2 py-1 border-b border-[#F8EEF0] last:border-0"
                   >
-                    {ord.state}
-                  </span>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#E5E7EB] shrink-0 bg-[#FAF7F5]">
+                        <img src={ord.thumbs[0]} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-[#1E3A5F] leading-tight">
+                          {ord.orderId}
+                        </p>
+                        <p className="text-[10px] text-[#6C849D] truncate">{ord.customer}</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-semibold text-[#1E3A5F] shrink-0">
+                      {ord.amount}
+                    </span>
+                    <span
+                      className="px-2 py-0.5 rounded text-[9.5px] font-semibold shrink-0"
+                      style={{ backgroundColor: ord.stateBg, color: ord.stateColor }}
+                    >
+                      {ord.state}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

@@ -23,6 +23,7 @@ const productSchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true, lowercase: true },
     sku: { type: String, trim: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
     shortDescription: String,
     description: String,
     images: [{ url: String, isMain: { type: Boolean, default: false } }],
@@ -50,5 +51,6 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ title: 'text', shortDescription: 'text' });
 productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ subCategory: 1, isActive: 1 });
 
 export const Product = mongoose.model('Product', productSchema);

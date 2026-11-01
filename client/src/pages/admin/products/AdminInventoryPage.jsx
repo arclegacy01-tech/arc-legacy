@@ -1,155 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../../components/admin/AdminIcons.jsx';
-
-const INITIAL_INVENTORY = [
-  {
-    id: 1,
-    name: 'Golden Zari Lace Trim',
-    subtitle: 'Premium lace trim',
-    sku: 'GT-1023',
-    category: 'Laces',
-    variants: 3,
-    totalStock: 120,
-    status: 'In Stock',
-    lastUpdatedDate: '16 Oct 2026',
-    lastUpdatedTime: '10:24 AM',
-    image: '/images/product-1.jpg',
-  },
-  {
-    id: 2,
-    name: 'Red Bridal Latkan',
-    subtitle: 'Designer bridal latkan',
-    sku: 'LT-2045',
-    category: 'Latkans',
-    variants: 4,
-    totalStock: 12,
-    status: 'Low Stock',
-    lastUpdatedDate: '15 Oct 2026',
-    lastUpdatedTime: '04:18 PM',
-    image: '/images/product-2.jpg',
-  },
-  {
-    id: 3,
-    name: 'Mirror Work Border',
-    subtitle: 'Embellished border',
-    sku: 'BR-1056',
-    category: 'Trims & Borders',
-    variants: 2,
-    totalStock: 0,
-    status: 'Out of Stock',
-    lastUpdatedDate: '15 Oct 2026',
-    lastUpdatedTime: '12:05 PM',
-    image: '/images/product-4.jpg',
-  },
-  {
-    id: 4,
-    name: 'Multicolor Pom Pom Trim',
-    subtitle: 'Colorful pom pom lace',
-    sku: 'PM-3021',
-    category: 'Pom Pom Trims',
-    variants: 5,
-    totalStock: 86,
-    status: 'In Stock',
-    lastUpdatedDate: '14 Oct 2026',
-    lastUpdatedTime: '03:42 PM',
-    image: '/images/product-3.jpg',
-  },
-  {
-    id: 5,
-    name: 'Pearl Hanging Latkan',
-    subtitle: 'Elegant pearl latkan',
-    sku: 'LT-3066',
-    category: 'Latkans',
-    variants: 3,
-    totalStock: 25,
-    status: 'In Stock',
-    lastUpdatedDate: '14 Oct 2026',
-    lastUpdatedTime: '11:20 AM',
-    image: '/images/product-5.jpg',
-  },
-  {
-    id: 6,
-    name: 'Gota Patti Lace',
-    subtitle: 'Traditional gota patti',
-    sku: 'GP-4011',
-    category: 'Gota Patti',
-    variants: 4,
-    totalStock: 8,
-    status: 'Low Stock',
-    lastUpdatedDate: '13 Oct 2026',
-    lastUpdatedTime: '05:14 PM',
-    image: '/images/product-8.jpg',
-  },
-  {
-    id: 7,
-    name: 'Bridal Pearl Latkan',
-    subtitle: 'Heavy bridal latkan',
-    sku: 'LT-5032',
-    category: 'Latkans',
-    variants: 6,
-    totalStock: 0,
-    status: 'Out of Stock',
-    lastUpdatedDate: '12 Oct 2026',
-    lastUpdatedTime: '02:37 PM',
-    image: '/images/product-7.jpg',
-  },
-  {
-    id: 8,
-    name: 'Designer Dori Latkan',
-    subtitle: 'Festive latkan',
-    sku: 'LT-5520',
-    category: 'Latkans',
-    variants: 4,
-    totalStock: 32,
-    status: 'In Stock',
-    lastUpdatedDate: '12 Oct 2026',
-    lastUpdatedTime: '11:08 AM',
-    image: '/images/product-9.jpg',
-  },
-  {
-    id: 9,
-    name: 'Antique Zari Border',
-    subtitle: 'Traditional border',
-    sku: 'BR-6011',
-    category: 'Trims & Borders',
-    variants: 2,
-    totalStock: 5,
-    status: 'Low Stock',
-    lastUpdatedDate: '11 Oct 2026',
-    lastUpdatedTime: '09:45 AM',
-    image: '/images/product-6.jpg',
-  },
-  {
-    id: 10,
-    name: 'Crystal Bead Latkan',
-    subtitle: 'Premium bead latkan',
-    sku: 'LT-7015',
-    category: 'Latkans',
-    variants: 3,
-    totalStock: 18,
-    status: 'In Stock',
-    lastUpdatedDate: '10 Oct 2026',
-    lastUpdatedTime: '06:22 PM',
-    image: '/images/product-10.jpg',
-  },
-];
-
-const LOW_STOCK_PRODUCTS = [
-  { name: 'Red Bridal Latkan', sku: 'LT-2045', left: '12 left', image: '/images/product-2.jpg' },
-  { name: 'Gota Patti Lace', sku: 'GP-4011', left: '8 left', image: '/images/product-8.jpg' },
-  { name: 'Antique Zari Border', sku: 'BR-6011', left: '5 left', image: '/images/product-6.jpg' },
-  { name: 'Pearl Hanging Latkan', sku: 'LT-3066', left: '10 left', image: '/images/product-5.jpg' },
-  { name: 'Designer Dori Latkan', sku: 'LT-5520', left: '7 left', image: '/images/product-9.jpg' },
-];
-
-const STOCK_MOVEMENTS = [
-  { name: 'Golden Zari Lace Trim', diff: '+20', isPositive: true, time: '16 Oct 2026, 10:24 AM' },
-  { name: 'Pearl Hanging Latkan', diff: '-5', isPositive: false, time: '15 Oct 2026, 04:12 PM' },
-  { name: 'Multicolor Pom Pom Trim', diff: '+50', isPositive: true, time: '14 Oct 2026, 02:18 PM' },
-  { name: 'Gota Patti Lace', diff: '-12', isPositive: false, time: '13 Oct 2026, 11:05 AM' },
-  { name: 'Crystal Bead Latkan', diff: '+8', isPositive: true, time: '12 Oct 2026, 09:42 AM' },
-];
+import { fetchAdminInventory, updateAdminStock } from '../../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../../hooks/useAdminSync.js';
 
 const STATUS_BADGE = {
   'In Stock': 'bg-[#E2F6EB] text-[#1D8852]',
@@ -157,11 +10,48 @@ const STATUS_BADGE = {
   'Out of Stock': 'bg-[#FDE8EC] text-[#C92A52]',
 };
 
+function mapDbInventory(p) {
+  const stock = Number(p.stock ?? 0);
+  const lowAlert = Number(p.lowStockAlert ?? 15);
+  let status = 'In Stock';
+  if (stock <= 0) status = 'Out of Stock';
+  else if (stock <= lowAlert) status = 'Low Stock';
+
+  const d = p.updatedAt ? new Date(p.updatedAt) : new Date();
+  const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  return {
+    id: p._id,
+    mongoId: p._id,
+    name: p.title || p.name || 'Product',
+    subtitle: p.subtitle || p.shortDescription || (p.description ? p.description.slice(0, 30) : 'Lace product'),
+    sku: p.sku || `SKU-${String(p._id).slice(-4).toUpperCase()}`,
+    category: p.category?.name || p.categoryName || 'Laces & Trims',
+    variants: p.variants?.length || 1,
+    totalStock: stock,
+    status,
+    lastUpdatedDate: dateStr,
+    lastUpdatedTime: timeStr,
+    image: p.images?.[0] || '/images/product-1.jpg',
+    raw: p,
+  };
+}
+
 export default function AdminInventoryPage() {
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
 
-  const [items, setItems] = useState(INITIAL_INVENTORY);
+  const { data: dbData, loading, refresh } = useAdminAutoRefresh(
+    () => fetchAdminInventory(),
+    ['inventory_updated', 'order_created', 'order_updated', 'product_created', 'product_updated']
+  );
+
+  const items = useMemo(() => {
+    const rawProducts = dbData?.products || [];
+    return rawProducts.map(mapDbInventory);
+  }, [dbData]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [statusFilter, setStatusFilter] = useState('All Status');
@@ -204,6 +94,27 @@ export default function AdminInventoryPage() {
     });
   }, [items, effectiveSearch, categoryFilter, statusFilter, stockLevelFilter]);
 
+  const lowStockProducts = useMemo(() => {
+    return items
+      .filter((i) => i.status === 'Low Stock' || i.status === 'Out of Stock')
+      .slice(0, 5)
+      .map((i) => ({
+        name: i.name,
+        sku: i.sku,
+        left: `${i.totalStock} left`,
+        image: i.image,
+      }));
+  }, [items]);
+
+  const stockMovements = useMemo(() => {
+    return items.slice(0, 5).map((i) => ({
+      name: i.name,
+      diff: `${i.totalStock > 0 ? '+' : ''}${i.totalStock}`,
+      isPositive: i.totalStock > 0,
+      time: `${i.lastUpdatedDate}, ${i.lastUpdatedTime}`,
+    }));
+  }, [items]);
+
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredItems.length && filteredItems.length > 0) {
       setSelectedIds([]);
@@ -218,23 +129,19 @@ export default function AdminInventoryPage() {
     );
   };
 
-  const handleUpdateStock = (newQty) => {
+  const handleUpdateStock = async (newQty) => {
     if (!editingItem) return;
     const qty = parseInt(newQty, 10);
     if (isNaN(qty) || qty < 0) return;
-    let nextStatus = 'In Stock';
-    if (qty === 0) nextStatus = 'Out of Stock';
-    else if (qty <= 15) nextStatus = 'Low Stock';
 
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === editingItem.id
-          ? { ...i, totalStock: qty, status: nextStatus }
-          : i
-      )
-    );
-    triggerToast(`Updated stock for ${editingItem.name} to ${qty}.`);
-    setEditingItem(null);
+    try {
+      await updateAdminStock(editingItem.mongoId || editingItem.id, qty);
+      triggerToast(`Updated stock for ${editingItem.name} to ${qty}.`);
+      setEditingItem(null);
+      refresh();
+    } catch (err) {
+      triggerToast('Failed to update stock in database.');
+    }
   };
 
   const handleExportCsv = () => {
@@ -317,13 +224,12 @@ export default function AdminInventoryPage() {
           <div>
             <p className="text-[11.5px] font-medium text-[#7A6268]">Total Products</p>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">286</span>
+              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">{items.length}</span>
               <span className="text-[11px] font-semibold text-[#1D8852] flex items-center gap-0.5">
-                <AdminIcon name="arrow-up" size={10} />
-                12%
+                Live
               </span>
             </div>
-            <p className="text-[10px] text-[#8C7076] mt-0.5">vs last month</p>
+            <p className="text-[10px] text-[#8C7076] mt-0.5">in catalog</p>
           </div>
         </div>
 
@@ -333,15 +239,13 @@ export default function AdminInventoryPage() {
             <AdminIcon name="grid" size={22} />
           </div>
           <div>
-            <p className="text-[11.5px] font-medium text-[#7A6268]">Total Stock Quantity</p>
+            <p className="text-[11.5px] font-medium text-[#7A6268]">Total Units in Stock</p>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">3,248</span>
-              <span className="text-[11px] font-semibold text-[#1D8852] flex items-center gap-0.5">
-                <AdminIcon name="arrow-up" size={10} />
-                8%
+              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">
+                {items.reduce((s, i) => s + (i.totalStock || 0), 0)}
               </span>
             </div>
-            <p className="text-[10px] text-[#8C7076] mt-0.5">in all products</p>
+            <p className="text-[10px] text-[#8C7076] mt-0.5">across all products</p>
           </div>
         </div>
 
@@ -353,10 +257,8 @@ export default function AdminInventoryPage() {
           <div>
             <p className="text-[11.5px] font-medium text-[#7A6268]">Low Stock Items</p>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">18</span>
-              <span className="text-[11px] font-semibold text-[#D98218] flex items-center gap-0.5">
-                <AdminIcon name="arrow-up" size={10} />
-                50%
+              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">
+                {items.filter((i) => i.status === 'Low Stock').length}
               </span>
             </div>
             <p className="text-[10px] text-[#8C7076] mt-0.5">needs attention</p>
@@ -371,10 +273,8 @@ export default function AdminInventoryPage() {
           <div>
             <p className="text-[11.5px] font-medium text-[#7A6268]">Out of Stock Items</p>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">6</span>
-              <span className="text-[11px] font-semibold text-[#C92A52] flex items-center gap-0.5">
-                <AdminIcon name="arrow-up" size={10} />
-                20%
+              <span className="text-[24px] font-bold text-[#2C1E21] leading-none">
+                {items.filter((i) => i.status === 'Out of Stock').length}
               </span>
             </div>
             <p className="text-[10px] text-[#8C7076] mt-0.5">currently unavailable</p>
@@ -661,28 +561,32 @@ export default function AdminInventoryPage() {
             </div>
 
             <div className="space-y-3">
-              {LOW_STOCK_PRODUCTS.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-2.5 text-[11.5px]">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-9 h-9 rounded-lg object-cover border border-[#EFE0E4] shrink-0"
-                    />
-                    <div className="truncate">
-                      <p className="font-bold text-[#2C1E21] leading-tight truncate">
-                        {p.name}
-                      </p>
-                      <p className="text-[10.5px] text-[#8C7076] mt-0.5 font-mono">
-                        SKU: {p.sku}
-                      </p>
+              {lowStockProducts.length === 0 ? (
+                <div className="text-center py-4 text-xs text-[#8C7076]">All catalog products are in stock</div>
+              ) : (
+                lowStockProducts.map((p, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2.5 text-[11.5px]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="w-9 h-9 rounded-lg object-cover border border-[#EFE0E4] shrink-0"
+                      />
+                      <div className="truncate">
+                        <p className="font-bold text-[#2C1E21] leading-tight truncate">
+                          {p.name}
+                        </p>
+                        <p className="text-[10.5px] text-[#8C7076] mt-0.5 font-mono">
+                          SKU: {p.sku}
+                        </p>
+                      </div>
                     </div>
+                    <span className="text-[#C92A52] font-bold text-[11px] shrink-0">
+                      {p.left}
+                    </span>
                   </div>
-                  <span className="text-[#C92A52] font-bold text-[11px] shrink-0">
-                    {p.left}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -768,7 +672,7 @@ export default function AdminInventoryPage() {
             </div>
 
             <div className="space-y-3">
-              {STOCK_MOVEMENTS.map((m, idx) => (
+              {stockMovements.map((m, idx) => (
                 <div key={idx} className="flex items-center justify-between gap-2.5 text-[11.5px]">
                   <div className="flex items-center gap-2 min-w-0">
                     <span

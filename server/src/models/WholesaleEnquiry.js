@@ -13,7 +13,11 @@ const wholesaleEnquirySchema = new mongoose.Schema(
     message: String,
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     productTitle: String,
-    status: { type: String, enum: ['new', 'contacted', 'quoted', 'closed'], default: 'new' },
+    status: {
+      type: String,
+      enum: ['new', 'contacted', 'quoted', 'closed', 'pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

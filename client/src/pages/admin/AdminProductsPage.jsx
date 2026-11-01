@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../components/admin/AdminIcons.jsx';
+import { fetchAdminProducts, deleteAdminProduct } from '../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../hooks/useAdminSync.js';
 
 const INITIAL_PRODUCTS = [
   {
@@ -137,6 +139,11 @@ export default function AdminProductsPage() {
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
 
+  const { data: apiData, refresh } = useAdminAutoRefresh(
+    () => fetchAdminProducts({ limit: 100 }),
+    ['product_created', 'product_updated', 'inventory_updated']
+  );
+
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
@@ -148,6 +155,41 @@ export default function AdminProductsPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  const effectiveProducts = useMemo(() => {
+    if (apiData && Array.isArray(apiData.products) && apiData.products.length > 0) {
+      return apiData.products.map((p) => ({
+        id: p._id || p.id,
+        _id: p._id,
+        name: p.title || p.name,
+        sku: p.sku || 'ARC-001',
+        category:
+          p.category?.name ||
+          p.category?.slug ||
+          (typeof p.category === 'string' ? p.category : 'General'),
+        subCategory:
+          p.subCategory?.name ||
+          p.subCategory?.slug ||
+          (typeof p.subCategory === 'string' ? p.subCategory : ''),
+        price: p.price || 0,
+        unit: p.unit || 'Meter',
+        stock: p.stock ?? 0,
+        status:
+          p.isActive === false
+            ? 'Draft'
+            : p.stock === 0
+            ? 'Out of Stock'
+            : p.stock <= (p.lowStockAlert || 10)
+            ? 'Low Stock'
+            : 'Active',
+        lastUpdated: p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : 'Recent',
+        image:
+          p.images?.[0]?.url ||
+          (typeof p.images?.[0] === 'string' ? p.images[0] : '/images/product-1.jpg'),
+      }));
+    }
+    return products;
+  }, [apiData, products]);
+
   const triggerToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3200);
@@ -156,7 +198,7 @@ export default function AdminProductsPage() {
   const effectiveSearch = (searchQuery || globalSearch).trim().toLowerCase();
 
   const filteredProducts = useMemo(() => {
-    return products
+    return effectiveProducts
       .filter((p) => {
         const matchesSearch =
           !effectiveSearch ||
@@ -181,7 +223,7 @@ export default function AdminProductsPage() {
         if (sortBy === 'Stock: High to Low') return b.stock - a.stock;
         return 0; // default Newest (initial order)
       });
-  }, [products, effectiveSearch, categoryFilter, stockStatusFilter, sortBy]);
+  }, [effectiveProducts, effectiveSearch, categoryFilter, stockStatusFilter, sortBy]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredProducts.length && filteredProducts.length > 0) {
@@ -228,9 +270,14 @@ export default function AdminProductsPage() {
     triggerToast('Products catalog exported to CSV.');
   };
 
-  const handleDeleteProduct = (id, name) => {
+  const handleDeleteProduct = async (id, name) => {
     if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteAdminProduct(id);
+      refresh();
+    } catch {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
     triggerToast(`Product "${name}" deleted.`);
   };
 
@@ -458,9 +505,13 @@ export default function AdminProductsPage() {
                             className="w-10 h-10 rounded-lg object-cover border border-[#EFE0E4] shrink-0"
                           />
                           <div>
-                            <p className="font-bold text-[#2C1E21] leading-snug">
+                            <Link
+                              to={`/admin/products/${p.id}/edit`}
+                              className="font-bold text-[#2C1E21] hover:text-[#8E1838] transition-colors leading-snug block"
+                              title="Click to edit product"
+                            >
                               {p.name}
-                            </p>
+                            </Link>
                             <p className="text-[11px] text-[#8C7076] mt-0.5">
                               SKU: {p.sku}
                             </p>

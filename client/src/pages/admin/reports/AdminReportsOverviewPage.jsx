@@ -1,92 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../../components/admin/AdminIcons.jsx';
-
-const RECENT_ORDERS = [
-  {
-    id: 1,
-    orderId: '#AL2761',
-    customer: 'Shree Traders',
-    type: 'Wholesale',
-    amount: '₹ 12,450',
-    status: 'Delivered',
-    date: '31 Oct 2026',
-  },
-  {
-    id: 2,
-    orderId: '#AL2760',
-    customer: 'Pooja Fashion Hub',
-    type: 'Wholesale',
-    amount: '₹ 18,900',
-    status: 'Processing',
-    date: '30 Oct 2026',
-  },
-  {
-    id: 3,
-    orderId: '#AL2759',
-    customer: 'Riya Lace House',
-    type: 'Retail',
-    amount: '₹ 2,350',
-    status: 'Shipped',
-    date: '30 Oct 2026',
-  },
-  {
-    id: 4,
-    orderId: '#AL2758',
-    customer: 'Meera Textiles',
-    type: 'Wholesale',
-    amount: '₹ 25,800',
-    status: 'Delivered',
-    date: '29 Oct 2026',
-  },
-  {
-    id: 5,
-    orderId: '#AL2757',
-    customer: 'Kavya Creations',
-    type: 'Retail',
-    amount: '₹ 1,980',
-    status: 'Processing',
-    date: '28 Oct 2026',
-  },
-];
-
-const TOP_PRODUCTS = [
-  {
-    id: 1,
-    name: 'Cotton Lace Trim (5m)',
-    sold: 420,
-    revenue: '₹ 84,000',
-    image: '/images/product-1.jpg',
-  },
-  {
-    id: 2,
-    name: 'Embroidered Lace (3m)',
-    sold: 310,
-    revenue: '₹ 74,400',
-    image: '/images/product-2.jpg',
-  },
-  {
-    id: 3,
-    name: 'Zari Lace (5m)',
-    sold: 260,
-    revenue: '₹ 62,400',
-    image: '/images/product-3.jpg',
-  },
-  {
-    id: 4,
-    name: 'Crochet Lace (4m)',
-    sold: 232,
-    revenue: '₹ 46,400',
-    image: '/images/product-4.jpg',
-  },
-  {
-    id: 5,
-    name: 'Designer Lace Trim (5m)',
-    sold: 210,
-    revenue: '₹ 52,500',
-    image: '/images/product-5.jpg',
-  },
-];
+import { fetchAdminReports } from '../../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../../hooks/useAdminSync.js';
+import { formatPrice } from '../../../utils/format.js';
 
 const TABS = [
   { label: 'Overview', to: '/admin/reports' },
@@ -102,6 +19,25 @@ export default function AdminReportsOverviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const outletCtx = useOutletContext() || {};
+
+  const [dateRange, setDateRange] = useState('30days');
+
+  const { data: reportData, loading, refresh } = useAdminAutoRefresh(
+    () => fetchAdminReports({ range: dateRange }),
+    ['order_created', 'order_updated', 'inventory_updated', 'customer_created'],
+    [dateRange]
+  );
+
+  const metrics = reportData?.metrics || {
+    totalSales: 0,
+    orderCount: 0,
+    averageOrderValue: 0,
+    totalUnitsSold: 0,
+    totalCustomers: 0,
+  };
+
+  const topProducts = reportData?.topProducts || [];
+  const recentOrders = reportData?.recentOrders || [];
 
   const isSalesRoute = location.pathname.includes('/reports/sales');
   const [activeTab, setActiveTab] = useState(isSalesRoute ? 'Sales Reports' : 'Overview');
@@ -194,12 +130,12 @@ export default function AdminReportsOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">₹4,85,320</span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{formatPrice(metrics.totalSales)}</span>
             <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 28%
+              Live
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">database total</p>
         </div>
 
         {/* Card 2: Total Orders */}
@@ -215,18 +151,15 @@ export default function AdminReportsOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">276</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 24%
-            </span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.orderCount}</span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">processed orders</p>
         </div>
 
         {/* Card 3: New Customers */}
         <div className="rounded-2xl border border-[#FFE8E8] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">New Customers</span>
+            <span className="text-xs font-medium text-gray-500">Total Customers</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3E8FF] text-purple-700">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -234,12 +167,9 @@ export default function AdminReportsOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">64</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 33%
-            </span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalCustomers}</span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">accounts</p>
         </div>
 
         {/* Card 4: Avg Order Value */}
@@ -253,18 +183,15 @@ export default function AdminReportsOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">₹1,758</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 12%
-            </span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{formatPrice(metrics.averageOrderValue)}</span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">per order</p>
         </div>
 
         {/* Card 5: Total Products Sold */}
         <div className="col-span-2 sm:col-span-1 rounded-2xl border border-[#FFE8E8] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">Total Products Sold</span>
+            <span className="text-xs font-medium text-gray-500">Total Units Sold</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020]">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -272,12 +199,9 @@ export default function AdminReportsOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">1,842</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 19%
-            </span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUnitsSold}</span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">units fulfilled</p>
         </div>
       </div>
 
@@ -718,48 +642,66 @@ export default function AdminReportsOverviewPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
-                    {RECENT_ORDERS.map((o) => (
-                      <tr key={o.id} className="hover:bg-[#FFF5F7] transition-colors">
-                        <td className="py-2.5 px-2 font-medium text-gray-500">{o.id}</td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-gray-900">{o.orderId}</td>
-                        <td className="py-2.5 px-3 font-semibold text-gray-800">{o.customer}</td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                              o.type === 'Wholesale'
-                                ? 'bg-[#FFF0F3] text-[#800020]'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {o.type}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-gray-900">{o.amount}</td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                              o.status === 'Delivered'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : o.status === 'Processing'
-                                ? 'bg-amber-50 text-amber-700'
-                                : 'bg-blue-50 text-blue-700'
-                            }`}
-                          >
-                            {o.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-500 text-[11px]">{o.date}</td>
-                        <td className="py-2.5 px-2 text-center">
-                          <button
-                            onClick={() => triggerToast(`Viewing order ${o.orderId}`)}
-                            title="View order"
-                            className="rounded p-1 text-gray-400 hover:text-[#800020]"
-                          >
-                            <AdminIcon name="eye" size={13} strokeWidth={1.75} />
-                          </button>
+                    {recentOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-6 text-center text-xs text-gray-500">
+                          No recent orders found for this period.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentOrders.map((o, idx) => (
+                        <tr key={o._id || o.id || idx} className="hover:bg-[#FFF5F7] transition-colors">
+                          <td className="py-2.5 px-2 font-medium text-gray-500">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
+                            {o.orderNumber || o.orderId || `#${String(o._id || '').slice(-6)}`}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-gray-800">
+                            {o.customerName || o.customer?.name || o.customer || 'Customer'}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                                o.type === 'Wholesale' || o.isWholesale
+                                  ? 'bg-[#FFF0F3] text-[#800020]'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {o.type || (o.isWholesale ? 'Wholesale' : 'Retail')}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-gray-900">
+                            {formatPrice(o.total || o.amount || 0)}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                                (o.status || '').toLowerCase() === 'delivered'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : (o.status || '').toLowerCase() === 'processing'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : (o.status || '').toLowerCase() === 'cancelled'
+                                  ? 'bg-rose-50 text-rose-700'
+                                  : 'bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              {o.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-gray-500 text-[11px]">
+                            {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : o.date || 'Recent'}
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            <button
+                              onClick={() => triggerToast(`Viewing order ${o.orderNumber || o.orderId || ''}`)}
+                              title="View order"
+                              className="rounded p-1 text-gray-400 hover:text-[#800020] cursor-pointer"
+                            >
+                              <AdminIcon name="eye" size={13} strokeWidth={1.75} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

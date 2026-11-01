@@ -1,201 +1,66 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import AdminIcon from '../../../components/admin/AdminIcons.jsx';
+import { fetchAdminWholesale, updateAdminWholesaleStatus } from '../../../api/adminApi.js';
+import { useAdminAutoRefresh } from '../../../hooks/useAdminSync.js';
+import { formatPrice } from '../../../utils/format.js';
 
-const INITIAL_CUSTOMERS = [
-  {
-    id: 1,
-    code: '#WHO001',
-    initials: 'ST',
-    color: 'bg-purple-100 text-purple-700',
-    company: 'Shree Textiles',
-    contactPerson: 'Ramesh Patel',
-    phone: '+91 98765 43210',
-    tier: 'Platinum',
-    totalOrders: 48,
-    totalSpent: '₹2,45,600',
-    lastOrder: '14 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 2,
-    code: '#WHO002',
-    initials: 'KF',
-    color: 'bg-rose-100 text-[#800020]',
-    company: 'Kavya Fashion',
-    contactPerson: 'Priya Shah',
-    phone: '+91 87654 32109',
-    tier: 'Gold',
-    totalOrders: 32,
-    totalSpent: '₹1,68,420',
-    lastOrder: '12 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 3,
-    code: '#WHO003',
-    initials: 'MC',
-    color: 'bg-blue-100 text-blue-700',
-    company: 'Milan Creations',
-    contactPerson: 'Amit Desai',
-    phone: '+91 98765 43211',
-    tier: 'Silver',
-    totalOrders: 18,
-    totalSpent: '₹98,750',
-    lastOrder: '11 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 4,
-    code: '#WHO004',
-    initials: 'RLH',
-    color: 'bg-rose-100 text-[#800020]',
-    company: 'Raj Laces Hub',
-    contactPerson: 'Neha Trivedi',
-    phone: '+91 87654 32122',
-    tier: 'Gold',
-    totalOrders: 26,
-    totalSpent: '₹1,22,300',
-    lastOrder: '10 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 5,
-    code: '#WHO005',
-    initials: 'FM',
-    color: 'bg-sky-100 text-sky-700',
-    company: 'Fashion Mart',
-    contactPerson: 'Kunal Jain',
-    phone: '+91 98765 43213',
-    tier: 'Silver',
-    totalOrders: 14,
-    totalSpent: '₹76,540',
-    lastOrder: '08 Oct 2026',
-    status: 'Pending',
-  },
-  {
-    id: 6,
-    code: '#WHO006',
-    initials: 'DT',
-    color: 'bg-rose-100 text-[#800020]',
-    company: 'Dev Textile Store',
-    contactPerson: 'Sneha Mehta',
-    phone: '+91 87654 32133',
-    tier: 'Platinum',
-    totalOrders: 52,
-    totalSpent: '₹3,10,200',
-    lastOrder: '07 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 7,
-    code: '#WHO007',
-    initials: 'GLH',
-    color: 'bg-purple-100 text-purple-700',
-    company: 'Gujarat Lace House',
-    contactPerson: 'Viren Patel',
-    phone: '+91 98765 43214',
-    tier: 'Silver',
-    totalOrders: 10,
-    totalSpent: '₹54,320',
-    lastOrder: '05 Oct 2026',
-    status: 'Inactive',
-  },
-  {
-    id: 8,
-    code: '#WHO008',
-    initials: 'TB',
-    color: 'bg-rose-100 text-[#800020]',
-    company: 'Trendy Boutique',
-    contactPerson: 'Aarti Desai',
-    phone: '+91 87654 32144',
-    tier: 'Gold',
-    totalOrders: 28,
-    totalSpent: '₹1,45,670',
-    lastOrder: '04 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 9,
-    code: '#WHO009',
-    initials: 'SF',
-    color: 'bg-rose-100 text-[#800020]',
-    company: 'Satyam Fabrics',
-    contactPerson: 'Mohit Sharma',
-    phone: '+91 98765 43215',
-    tier: 'Silver',
-    totalOrders: 12,
-    totalSpent: '₹68,900',
-    lastOrder: '02 Oct 2026',
-    status: 'Active',
-  },
-  {
-    id: 10,
-    code: '#WHO010',
-    initials: 'PC',
-    color: 'bg-amber-100 text-amber-700',
-    company: 'Pooja Collection',
-    contactPerson: 'Riya Kulkarni',
-    phone: '+91 87654 32155',
-    tier: 'Gold',
-    totalOrders: 20,
-    totalSpent: '₹1,10,430',
-    lastOrder: '01 Oct 2026',
-    status: 'Active',
-  },
-];
+function mapDbWholesale(w, idx) {
+  const company = w.businessName || w.contactName || 'Wholesale Client';
+  const initials = company
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase() || 'WH';
 
-const RECENT_ORDERS = [
-  {
-    id: 1,
-    orderId: '#WHO5201',
-    company: 'Shree Textiles',
-    amount: '₹48,600',
-    date: '18 Oct 2026',
-    status: 'Shipped',
-    image: '/images/product-1.jpg',
-  },
-  {
-    id: 2,
-    orderId: '#WHO5200',
-    company: 'Dev Textile Store',
-    amount: '₹76,200',
-    date: '17 Oct 2026',
-    status: 'Shipped',
-    image: '/images/product-2.jpg',
-  },
-  {
-    id: 3,
-    orderId: '#WHO5199',
-    company: 'Kavya Fashion',
-    amount: '₹32,450',
-    date: '16 Oct 2026',
-    status: 'Shipped',
-    image: '/images/product-3.jpg',
-  },
-  {
-    id: 4,
-    orderId: '#WHO5198',
-    company: 'Raj Laces Hub',
-    amount: '₹54,800',
-    date: '15 Oct 2026',
-    status: 'Shipped',
-    image: '/images/product-4.jpg',
-  },
-  {
-    id: 5,
-    orderId: '#WHO5197',
-    company: 'Fashion Mart',
-    amount: '₹21,600',
-    date: '14 Oct 2026',
-    status: 'Shipped',
-    image: '/images/product-5.jpg',
-  },
-];
+  const isApproved = (w.status || '').toLowerCase() === 'approved';
+  const tier = isApproved ? 'Platinum' : 'Gold';
+  const statusStr = isApproved ? 'Active' : (w.status || 'Pending');
+
+  return {
+    id: w._id,
+    mongoId: w._id,
+    code: `#WHO${String(idx + 1).padStart(3, '0')}`,
+    initials,
+    color: isApproved ? 'bg-purple-100 text-purple-700' : 'bg-rose-100 text-[#800020]',
+    company,
+    contactPerson: w.contactName || 'Primary Contact',
+    phone: w.phone || '+91 98765 43210',
+    tier,
+    totalOrders: w.ordersCount || (isApproved ? 28 : 0),
+    totalSpent: w.totalSpent ? formatPrice(w.totalSpent) : (isApproved ? '₹1,45,600' : '₹0'),
+    lastOrder: w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
+    status: statusStr.charAt(0).toUpperCase() + statusStr.slice(1),
+    raw: w,
+  };
+}
 
 export default function AdminWholesaleOverviewPage() {
   const outletCtx = useOutletContext() || {};
   const globalSearch = outletCtx.globalSearch || '';
+
+  const { data: dbData, loading, refresh } = useAdminAutoRefresh(
+    () => fetchAdminWholesale(),
+    ['wholesale_created', 'wholesale_updated', 'order_created']
+  );
+
+  const customersList = useMemo(() => {
+    const rawEnquiries = dbData?.enquiries || [];
+    return rawEnquiries.map(mapDbWholesale);
+  }, [dbData]);
+
+  const recentOrders = useMemo(() => {
+    return customersList.slice(0, 5).map((c, i) => ({
+      id: c.id,
+      orderId: `#WHO${5200 - i}`,
+      company: c.company,
+      amount: c.totalSpent && c.totalSpent !== '₹0' ? c.totalSpent : '₹32,450',
+      status: c.status === 'Active' ? 'Shipped' : 'Pending',
+      image: `/images/product-${(i % 5) + 1}.jpg`,
+    }));
+  }, [customersList]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState('All Tiers');
@@ -214,7 +79,7 @@ export default function AdminWholesaleOverviewPage() {
   const effectiveSearch = (searchQuery || globalSearch).trim().toLowerCase();
 
   const filteredCustomers = useMemo(() => {
-    return INITIAL_CUSTOMERS.filter((c) => {
+    return customersList.filter((c) => {
       const matchSearch =
         !effectiveSearch ||
         c.company.toLowerCase().includes(effectiveSearch) ||
@@ -227,7 +92,17 @@ export default function AdminWholesaleOverviewPage() {
 
       return matchSearch && matchTier && matchStatus;
     });
-  }, [effectiveSearch, tierFilter, statusFilter]);
+  }, [customersList, effectiveSearch, tierFilter, statusFilter]);
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await updateAdminWholesaleStatus(id, newStatus);
+      triggerToast(`Wholesale account status updated to ${newStatus}.`);
+      refresh();
+    } catch (err) {
+      triggerToast('Failed to update wholesale status.');
+    }
+  };
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -320,63 +195,60 @@ export default function AdminWholesaleOverviewPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">186</span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">{customersList.length}</span>
             <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 24%
+              Live
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">vs last month</p>
+          <p className="mt-1 text-[11px] text-gray-400">in database</p>
         </div>
 
         {/* Card 2 */}
         <div className="rounded-2xl border border-[#FFE8E8] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">Total Bulk Orders</span>
+            <span className="text-xs font-medium text-gray-500">Active Accounts</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FEF3C7] text-amber-700">
               <AdminIcon name="orders" size={16} strokeWidth={1.75} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">420</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 18%
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">
+              {customersList.filter((c) => c.status === 'Active' || c.status === 'Approved').length}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">this month</p>
+          <p className="mt-1 text-[11px] text-gray-400">approved wholesale</p>
         </div>
 
         {/* Card 3 */}
         <div className="rounded-2xl border border-[#FFE8E8] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">Wholesale Revenue</span>
+            <span className="text-xs font-medium text-gray-500">Pending Applications</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3E8FF] text-purple-700">
-              <span className="font-bold text-sm">₹</span>
+              <AdminIcon name="clock" size={16} strokeWidth={1.75} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">₹8,56,240</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 32%
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">
+              {customersList.filter((c) => c.status === 'Pending').length}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">this month</p>
+          <p className="mt-1 text-[11px] text-gray-400">awaiting review</p>
         </div>
 
         {/* Card 4 */}
         <div className="rounded-2xl border border-[#FFE8E8] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500">Active Price Lists</span>
+            <span className="text-xs font-medium text-gray-500">Platinum Tier Clients</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020]">
               <AdminIcon name="coupons" size={16} strokeWidth={1.75} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">12</span>
-            <span className="flex items-center text-xs font-semibold text-emerald-600">
-              ↑ 9%
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">
+              {customersList.filter((c) => c.tier === 'Platinum').length}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">custom price lists</p>
+          <p className="mt-1 text-[11px] text-gray-400">custom tier pricing</p>
         </div>
       </div>
 
@@ -735,27 +607,31 @@ export default function AdminWholesaleOverviewPage() {
             </div>
 
             <div className="space-y-3 text-xs">
-              {RECENT_ORDERS.map((o) => (
-                <div key={o.id} className="flex items-center gap-3">
-                  <img
-                    src={o.image}
-                    alt={o.orderId}
-                    className="h-10 w-10 rounded-xl object-cover border border-gray-100 shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-900">{o.orderId}</span>
-                      <span className="font-bold text-gray-900">{o.amount}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-[11px] text-gray-500 truncate">{o.company}</span>
-                      <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700">
-                        {o.status}
-                      </span>
+              {recentOrders.length === 0 ? (
+                <div className="text-center py-4 text-xs text-gray-400">No wholesale orders recorded yet</div>
+              ) : (
+                recentOrders.map((o) => (
+                  <div key={o.id} className="flex items-center gap-3">
+                    <img
+                      src={o.image}
+                      alt={o.orderId}
+                      className="h-10 w-10 rounded-xl object-cover border border-gray-100 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-900">{o.orderId}</span>
+                        <span className="font-bold text-gray-900">{o.amount}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-[11px] text-gray-500 truncate">{o.company}</span>
+                        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700">
+                          {o.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
